@@ -500,6 +500,17 @@ import ReportBuilder from '@jul6art/dataflow-bundle/controllers/report_builder_c
 app.register('dataflow--report-builder', ReportBuilder);
 ```
 
+⚠️ **If your build derives identifiers from a PATH instead — `@symfony/stimulus-bundle` and
+`startStimulusApp()` do — name the relay file with a DASH.** The derivation replaces `/` with `--`
+and strips `_controller.js`; it does **not** turn underscores into dashes. So
+`assets/controllers/dataflow/report_builder_controller.js` registers
+`dataflow--report_builder`, while this bundle's partial emits `dataflow--report-builder`. The
+controller then loads, registers, and attaches to nothing: no console error, no 404, inert buttons,
+and a green test suite — the third consumer of this bundle lost an hour to it. Either name the file
+`report-builder_controller.js`, or set `stimulus_identifier` to whatever your build actually
+produces. A test worth having reads the `dataflow.stimulus_identifier` parameter and asserts a relay
+of that name exists.
+
 ```css
 @import '@jul6art/dataflow-bundle/styles/dataflow.css';
 ```
@@ -568,6 +579,42 @@ expression, because the route had been generated with `id: 0`.
 permission code it invented: the codes are yours, and a guessed one answers false everywhere, which
 hides the control on every screen and looks like a broken feature. Hiding it is not the guard
 either — the payload carries `shareScope`, so the server has to refuse it too.
+
+#### What the five endpoints exchange
+
+The shipped controller posts `multipart/form-data` and reads JSON. Getting a field name wrong here
+fails **silently**, so the wire is worth writing down:
+
+| Endpoint | It sends | It reads back |
+| --- | --- | --- |
+| `fields_url` | `?entity=<FQCN>` on a GET | `{fields: [ReportField::toArray(), …]}` |
+| `run_url` | `entity`, `columns`, `filters` (the last two JSON-encoded), optional `limit`/`offset` | `{columns: [{label, path}], rows: [...]}` |
+| `export_url` | the same, plus `format` (a writer's `code()`) | the file itself |
+| `save_url` | the same, plus `name`, `shareScope`, and `id` when updating | `{id: <the stored id>}` |
+| `load_url` | nothing — the id is in the path | `{id, name, entity, columns, filters, shareScope}` |
+
+⚠️ **`shareScope` is the string `private` or `organization`, in BOTH directions.** It is not a
+boolean, and the name is inherited from the first consumer, which had three scopes. An application
+storing a boolean converts at those two points and nowhere else — and reading `shared` off the
+request instead makes every save private, with no error, because an absent boolean is `false`.
+
+⚠️ **The auto-load entry point is `?load=<id>` on the page itself.** The controller reads it at
+connect and fetches `load_url`, which is how a saved-reports table hands a report over — and it
+makes the link shareable. The bundle ships no list of saved reports: that is a screen, and screens
+are the application's.
+
+⚠️ **The controller reads only `id` from the save response.** Anything else you return is dead
+payload.
+
+⚠️ **No CSRF token is sent, and you should know it before you mount these routes.** The three POST
+endpoints carry no token today. `run` and `export` leak nothing across origins — a cross-site POST
+cannot read a JSON body or a download — so what is actually exposed is `save`: a forged request can
+create a report in the victim's account, or overwrite one by guessing a sequential id. That is a
+nuisance rather than a disclosure, which is why it has not held up a release; it is written here so
+that nobody assumes a protection that is not there. Until the bundle carries a token the way
+`datatable-bundle` does (the application names the token id, the shipped controller sends it), an
+application whose policy requires one should not mount `save_url` — the other four endpoints are
+usable without it.
 
 ### 4. Wire the busy state, if you have an overlay
 
