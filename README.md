@@ -169,6 +169,75 @@ If you add your own writer, implement `Io\TabularWriterInterface` and call
 `FormulaInjectionGuard::neutralizeRow()` on every row you emit. The guard is idempotent, so a row
 that goes through it twice is unchanged the second time.
 
+### Running a report
+
+A report is a `ReportSpec` — a root entity, columns, filters — run against Doctrine and streamed.
+
+```php
+use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
+
+$spec   = new ReportSpecInterpreter()->interpret($savedDefinition);   // your stored payload
+$result = $runner->run($spec, $actor, limit: 50_000, scope: $this->scopeToTenant(...));
+
+return $this->responses->stream($writer, $result->header(), $result->rows(), 'invoices');
+```
+
+⚠️ **`rows()` is a `Generator`, single-use, and uncountable.** Iterating twice throws; counting
+means a second query. Both are deliberate — a caller that needs the rows twice runs the report
+twice, so the cost is a decision rather than a default. Do not wrap it in `iterator_to_array()`
+without meaning to: that is precisely the defect this replaced, where a runner held two complete
+copies of a 50 000-row result set before emitting a byte.
+
+⚠️ **Tenant scoping is yours.** The bundle does not know what a tenant is, so `run()` takes a
+`$scope` closure receiving the query builder and the root alias. Inventing an `organization`
+column here would fit one consumer and silently return everything for the others.
+
+### Declaring what may be reported
+
+Two gates, and they answer different questions.
+
+```php
+final class CrmReportableEntityProvider implements ReportableEntityProviderInterface
+{
+    public function entities(): array
+    {
+        return [
+            Contact::class => new ReportableEntity('report.entity.contact', 'crm:contact:read', 'crm.manage'),
+        ];
+    }
+}
+```
+
+Tag it `dataflow.report.entity_provider` — or better, a `_instanceof` block in `services.yaml`.
+
+⚠️ **`#[AsTaggedItem]` alone does NOT add the tag**; it only indexes an item in an iterator that
+already exists. An application relying on it gets an empty iterator and a runtime failure.
+
+⚠️ **The feature is nullable, and the checker is optional.** Feature flags say what a tenant
+*bought*; permissions say what a person *may do*. A single-product application has no feature
+system: it declares `null`, binds no `FeatureCheckerInterface`, and only the permission gate
+applies. The bundle's compiler pass nulls the contract rather than letting the container fail to
+compile — which is what an unconditional constructor argument would do, and what two bundles of
+this ecosystem shipped before.
+
+⚠️ **The permission gate is never optional.** A report engine without a per-entity gate is a
+cross-tenant exfiltration tool.
+
+### What the field catalogue refuses, and why
+
+| Refused | Because |
+| --- | --- |
+| a `toMany` relation | one invoice with four lines returns four rows; an export of a thousand silently multiplies |
+| a globally denied name (`password`, `apiToken`, …) | once in a spreadsheet is once too often; the list is code, not configuration |
+| a catalogued target the actor may not read | otherwise `invoice.customer.email` is granted by `invoice:read` alone |
+| whatever a `FieldPolicyInterface` narrows | a global name list cannot tell a name sensitive on one entity from the same name on another |
+
+An *uncatalogued* target — a referential, a country, a unit — is traversed freely: demanding a
+catalogue entry per look-up table would make the catalogue unusable.
+
+⚠️ **The catalogue lists selectable SCALARS.** `customer` alone is not a path; a null check on a
+relation goes through its identifier (`customer.id IS NULL`).
+
 Quality assurance
 -----------------
 
