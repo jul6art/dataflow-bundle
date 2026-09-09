@@ -34,7 +34,7 @@ final class EntityCatalog
     /** @var array<class-string, ReportableEntity>|null */
     private ?array $catalog = null;
 
-    /** @var array<string, array<class-string, ReportableEntity>> */
+    /** @var array<array-key, array<class-string, ReportableEntity>> */
     private array $allowed = [];
 
     /**
@@ -97,6 +97,23 @@ final class EntityCatalog
     public function isAllowed(AclUserInterface $actor, string $fqcn): bool
     {
         return isset($this->listFor($actor)[$fqcn]);
+    }
+
+    /**
+     * What the catalogue declares about an entity, **regardless of any actor**.
+     *
+     * ⚠️ The distinction from {@see self::isAllowed()} matters and is easy to get backwards. The
+     * field catalogue traverses a relation only if it may; to decide, it first has to know whether
+     * the target is a reportable entity AT ALL. A referential — a country, a unit, a tax rate — is
+     * not in the catalogue and is traversed freely, because requiring one entry per look-up table
+     * would make the catalogue unusable. Only a target the catalogue KNOWS is then gated on the
+     * actor.
+     *
+     * Answering `null` therefore means "not a reportable entity", never "refused".
+     */
+    public function metaFor(string $fqcn): ?ReportableEntity
+    {
+        return $this->catalog()[$fqcn] ?? null;
     }
 
     /**
