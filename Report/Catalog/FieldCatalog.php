@@ -34,6 +34,11 @@ use Jul6Art\AclBundle\Contract\AclUserInterface;
  * distinguish a name that is sensitive on one entity and innocuous on another, and that bluntness
  * is what kept an entire HR module out of reporting in one application.
  *
+ * ⚠️ **A {@see RelationPolicyInterface} may refuse a TRAVERSAL.** Refusing every field of the
+ * target is not the same thing: the walk continues, so `organization.owner.email` survives a policy
+ * that denies every field of `Organization`. The first consumer had removed `organization` from its
+ * reportable relations on purpose, and the extraction put it back — silently.
+ *
  * ## Memoised per root, actor and depth
  *
  * ⚠️ The version this replaces rebuilt the whole walk on **every** path check, and its runner
@@ -74,6 +79,7 @@ final class FieldCatalog
         private readonly EntityManagerInterface $entityManager,
         private readonly EntityCatalog $entities,
         private readonly ?FieldPolicyInterface $policy = null,
+        private readonly ?RelationPolicyInterface $relations = null,
     ) {
     }
 
@@ -219,6 +225,12 @@ final class FieldCatalog
         // A target the catalogue knows about is gated; one it does not is a referential, and
         // requiring an entry per look-up table would make the catalogue unusable.
         if (null !== $this->entities->metaFor($target) && !$this->entities->isAllowed($actor, $target)) {
+            return null;
+        }
+
+        // ⚠️ Consulted LAST, so it can only narrow — and it is the only thing that can refuse a
+        // referential, which the branch above deliberately lets through.
+        if (null !== $this->relations && !$this->relations->allows($meta->getName(), $name, $target, $actor)) {
             return null;
         }
 

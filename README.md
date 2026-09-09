@@ -362,7 +362,18 @@ cross-tenant exfiltration tool.
 | whatever a `FieldPolicyInterface` narrows | a global name list cannot tell a name sensitive on one entity from the same name on another |
 
 An *uncatalogued* target — a referential, a country, a unit — is traversed freely: demanding a
-catalogue entry per look-up table would make the catalogue unusable.
+catalogue entry per look-up table would make the catalogue unusable. To refuse one of those anyway,
+bind a `RelationPolicyInterface`:
+
+```yaml
+Jul6Art\DataflowBundle\Report\Catalog\RelationPolicyInterface: '@App\Report\UnreportableRelations'
+```
+
+⚠️ **A `FieldPolicyInterface` cannot do this.** It is asked about a scalar, so denying every field
+of the target leaves the walk running and `organization.owner.email` is still offered. The first
+consumer of this bundle had removed `organization` from its reportable relations deliberately, and
+the extraction put it back — not a cross-tenant leak, the rows stay scoped, but a relation somebody
+had decided not to expose, exposed again, in silence.
 
 ⚠️ **The catalogue lists selectable SCALARS.** `customer` alone is not a path; a null check on a
 relation goes through its identifier (`customer.id IS NULL`).

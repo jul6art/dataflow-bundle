@@ -100,6 +100,7 @@ services:
             $entityManager: '@Doctrine\ORM\EntityManagerInterface'
             $entities: '@Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog'
             $policy: '@?Jul6Art\DataflowBundle\Report\Catalog\FieldPolicyInterface'
+            $relations: '@?Jul6Art\DataflowBundle\Report\Catalog\RelationPolicyInterface'
 
     Jul6Art\DataflowBundle\Report\ReportRunner:
         arguments:

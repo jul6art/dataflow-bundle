@@ -10,6 +10,7 @@ use Jul6Art\AclBundle\Security\PermissionDecisionService;
 use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldPolicyInterface;
+use Jul6Art\DataflowBundle\Report\Catalog\RelationPolicyInterface;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntity;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntityProviderInterface;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportField;
@@ -174,6 +175,66 @@ final class FieldCatalogTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ The tool a field policy cannot replace. Refusing every FIELD of the target leaves the walk
+     * running, so a path two hops deep survives — which is how the first consumer's deliberately
+     * un-reportable relation came back after the extraction.
+     */
+    public function testARelationPolicyStopsTheTraversalEntirely(): void
+    {
+        $policy = new class implements RelationPolicyInterface {
+            public function allows(string $entity, string $relation, string $target, AclUserInterface $actor): bool
+            {
+                return 'customer' !== $relation;
+            }
+        };
+
+        $paths = $this->paths($this->catalog(relations: $policy));
+
+        self::assertContains('number', $paths, 'The root is untouched…');
+        self::assertNotContains('customer.name', $paths, '…the relation is gone…');
+        self::assertNotContains('customer.account.label', $paths, '…and so is everything behind it.');
+    }
+
+    /**
+     * ⚠️ And the contrast that makes the previous test worth having: denying every FIELD of the
+     * target does NOT stop the walk. `customer.account.label` survives, because `Account` is a
+     * different entity and the policy is asked per entity. A consumer that reached for a field
+     * policy to hide a relation would ship exactly this hole.
+     */
+    public function testDenyingEveryFieldOfATargetDoesNotStopTheWalk(): void
+    {
+        $policy = new class implements FieldPolicyInterface {
+            public function allows(string $entity, string $field, AclUserInterface $actor): bool
+            {
+                return Customer::class !== $entity;
+            }
+        };
+
+        $paths = $this->paths($this->catalog(policy: $policy));
+
+        self::assertNotContains('customer.name', $paths);
+        self::assertContains('customer.account.label', $paths, 'Two hops out, and still offered.');
+    }
+
+    /**
+     * ⚠️ A relation policy can only NARROW: it runs after the entity catalogue, so answering true
+     * never re-opens a target the catalogue refused.
+     */
+    public function testAPermissiveRelationPolicyCannotReopenARefusedTarget(): void
+    {
+        $policy = new class implements RelationPolicyInterface {
+            public function allows(string $entity, string $relation, string $target, AclUserInterface $actor): bool
+            {
+                return true;
+            }
+        };
+
+        $paths = $this->paths($this->catalog(granted: ['invoice:read'], relations: $policy));
+
+        self::assertNotContains('customer.name', $paths);
+    }
+
+    /**
      * ⚠️ The runtime guard: the screen is not the only way in.
      */
     public function testACraftedPathIsRefusedAtRuntime(): void
@@ -216,6 +277,7 @@ final class FieldCatalogTest extends AbstractFunctionalTestCase
     private function catalog(
         array $granted = ['invoice:read', 'customer:read'],
         ?FieldPolicyInterface $policy = null,
+        ?RelationPolicyInterface $relations = null,
     ): FieldCatalog {
         $container = $this->boot(withOrm: true);
         $entityManager = $container->get('doctrine.orm.default_entity_manager');
@@ -239,7 +301,7 @@ final class FieldCatalogTest extends AbstractFunctionalTestCase
             },
         ]);
 
-        return new FieldCatalog($entityManager, $entities, $policy);
+        return new FieldCatalog($entityManager, $entities, $policy, $relations);
     }
 
     /**
