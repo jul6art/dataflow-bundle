@@ -54,18 +54,22 @@ abstract class AbstractFunctionalTestCase extends TestCase
      * introduced — and then a red one, minutes later, for code that had not changed. Exactly the
      * failure mode the paragraph above warns about, in the harness that warns about it.
      *
-     * @param array<string, mixed> $bundleConfig
+     * @param array<string, mixed>                $bundleConfig
+     * @param array<string, array<string, mixed>> $extraConfig  configuration for other extensions,
+     *                                                          keyed by alias
      */
     final protected function boot(
         string $environment = 'test',
         array $bundleConfig = [],
         bool $withOrm = false,
         bool $withTwig = false,
+        array $extraConfig = [],
     ): ContainerInterface {
         $uniqueId = substr(md5(serialize([
             $bundleConfig,
             $withOrm,
             $withTwig,
+            $extraConfig,
             self::sourceFingerprint(),
         ])), 0, 12);
 
@@ -76,6 +80,7 @@ abstract class AbstractFunctionalTestCase extends TestCase
             $bundleConfig,
             withOrm: $withOrm,
             withTwig: $withTwig,
+            extraConfig: $extraConfig,
             uniqueId: $uniqueId,
         );
         $this->kernel->boot();

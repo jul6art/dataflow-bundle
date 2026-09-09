@@ -84,6 +84,12 @@ framework:
             interval: '1 hour'
 ```
 
+⚠️ **That works whatever order your `config/bundles.php` lists.** The parameters are published from
+the extension's `prepend()`, which runs for every bundle before any `load()` — so they exist by the
+time FrameworkBundle reads its own configuration. Published from `load()` (as v1.0.1 did) the
+placeholder failed with *"You have requested a non-existent parameter … while loading extension
+framework"*, and it would have *worked* for a consumer that happened to register this bundle first.
+
 Ports
 -----
 

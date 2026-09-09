@@ -18,6 +18,7 @@ use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
 use Jul6Art\DataflowBundle\Report\ReportRunner;
 use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
 use PHPUnit\Framework\Attributes\CoversNothing;
+use Twig\Environment;
 
 /**
  * What the container actually contains — which is the half of a bundle a unit test cannot reach.
@@ -80,6 +81,29 @@ final class WiringTest extends AbstractFunctionalTestCase
         self::assertSame(10000, $container->getParameter('dataflow.limits.import_rows'));
         self::assertSame(5, $container->getParameter('dataflow.limits.imports_per_hour'));
         self::assertSame(2, $container->getParameter('dataflow.limits.field_max_depth'));
+    }
+
+    /**
+     * ⚠️ **The parameters have to exist before ANOTHER bundle's extension loads.** Extensions load
+     * in bundle-registration order, and TwigBundle is registered before this one here — so a
+     * `%dataflow.limits.*%` placeholder in Twig's own configuration resolves only because the
+     * parameters are published from `prepend()`, which runs for every bundle before any `load()`.
+     *
+     * Set from `load()` this failed with "You have requested a non-existent parameter
+     * dataflow.limits.export_rows_per_hour while loading extension framework" — and, worse, it
+     * would have *worked* for a consumer that happened to register this bundle first. An ordering
+     * nobody declared is the hardest kind of dependency to find.
+     */
+    public function testACeilingIsReadableFromAnEarlierBundlesConfiguration(): void
+    {
+        $container = $this->boot(
+            withTwig: true,
+            extraConfig: ['twig' => ['globals' => ['budget' => '%dataflow.limits.export_rows_per_hour%']]],
+        );
+
+        $twig = $container->get('twig');
+        self::assertInstanceOf(Environment::class, $twig);
+        self::assertSame(10000, $twig->getGlobals()['budget'] ?? null);
     }
 
     /**

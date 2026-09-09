@@ -42,20 +42,26 @@ use Symfony\Component\HttpKernel\Kernel;
 final class TestKernel extends Kernel
 {
     /**
-     * @param array<string, mixed> $bundleConfig configuration for the "dataflow" extension
-     * @param bool                 $withOrm      registers DoctrineBundle on in-memory SQLite,
-     *                                           mapped on Tests/Fixtures/Entity
-     * @param bool                 $withTwig     registers TwigBundle, so the shipped partials can
-     *                                           be RENDERED rather than merely parsed
-     * @param string               $uniqueId     keys the build directory, so two scenarios never
-     *                                           share a compiled container while identical ones
-     *                                           still reuse the cache
+     * @param array<string, mixed>                $bundleConfig configuration for the "dataflow" extension
+     * @param bool                                $withOrm      registers DoctrineBundle on in-memory SQLite,
+     *                                                          mapped on Tests/Fixtures/Entity
+     * @param bool                                $withTwig     registers TwigBundle, so the shipped partials can
+     *                                                          be RENDERED rather than merely parsed
+     * @param array<string, array<string, mixed>> $extraConfig  configuration for OTHER extensions,
+     *                                                          keyed by alias. Its point is ordering: those
+     *                                                          extensions are registered before this bundle, so
+     *                                                          a `%dataflow.*%` placeholder in here only resolves
+     *                                                          if the parameter was published in `prepend()`
+     * @param string                              $uniqueId     keys the build directory, so two scenarios never
+     *                                                          share a compiled container while identical ones
+     *                                                          still reuse the cache
      */
     public function __construct(
         string $environment,
         private readonly array $bundleConfig = [],
         private readonly bool $withOrm = false,
         private readonly bool $withTwig = false,
+        private readonly array $extraConfig = [],
         private readonly string $uniqueId = 'default',
     ) {
         // Debug mode installs Symfony's error handler and never removes it, which PHPUnit
@@ -199,6 +205,10 @@ final class TestKernel extends Kernel
             // its `Resources/translations` catalogue is picked up the same way — so nothing has to
             // be pointed at here, which is exactly what a consumer gets.
             $container->loadFromExtension('twig', ['strict_variables' => true]);
+        }
+
+        foreach ($this->extraConfig as $alias => $configuration) {
+            $container->loadFromExtension($alias, $configuration);
         }
 
         $container->loadFromExtension('dataflow', $this->bundleConfig);

@@ -10,6 +10,7 @@ use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
+use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 
 /**
@@ -26,7 +27,7 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
  *    here: an extension runs before the other bundles have configured anything, so
  *    `$container->has('some.service')` is always false at this point.
  */
-class DataflowExtension extends Extension
+class DataflowExtension extends Extension implements PrependExtensionInterface
 {
     /**
      * Configuration node → {@see Limits} constructor argument.
@@ -68,6 +69,57 @@ class DataflowExtension extends Extension
         ]);
     }
 
+    /**
+     * Publishes the ceilings as container parameters, and the two Twig globals.
+     *
+     * ## Why `prepend()` and not `load()`
+     *
+     * ⚠️ **A parameter another bundle's YAML interpolates has to exist before that bundle's
+     * extension loads**, and extensions load in bundle-registration order. Set from `load()`,
+     * `%dataflow.limits.export_rows_per_hour%` was undefined by the time FrameworkBundle read a
+     * `rate_limiter` whose `limit` referenced it — "You have requested a non-existent parameter …
+     * while loading extension framework". And it would have *worked* for a consumer that happened
+     * to register this bundle before FrameworkBundle, which is the worst kind of dependency: an
+     * ordering nobody declared.
+     *
+     * `prepend()` runs for every bundle before ANY `load()`, so this is the only hook where the
+     * answer does not depend on the order. The configuration is read with `getExtensionConfig()`,
+     * since `load()`'s `$configs` are not handed to `prepend()`.
+     */
+    #[\Override]
+    public function prepend(ContainerBuilder $container): void
+    {
+        $config = $this->processConfiguration(
+            new Configuration(),
+            $container->getExtensionConfig($this->getAlias()),
+        );
+
+        if (false === ($config['enabled'] ?? true)) {
+            return;
+        }
+
+        $limits = $config['limits'] ?? [];
+
+        if (!\is_array($limits)) {
+            throw new \LogicException('The "limits" node must be an array; the configuration tree guarantees it.');
+        }
+
+        foreach (self::LIMIT_NODES as $node => $argument) {
+            $value = $limits[$node] ?? null;
+
+            if (!\is_int($value)) {
+                throw new \LogicException(\sprintf('Limit "%s" is missing from the configuration tree.', $node));
+            }
+
+            $container->setParameter('dataflow.limits.'.$node, $value);
+        }
+
+        $container->setParameter('dataflow.translation_domain', self::domain($config));
+        $container->setParameter('dataflow.stimulus_identifier', self::stimulus($config));
+
+        $this->exposeTwigGlobals($container, self::stimulus($config), self::domain($config));
+    }
+
     #[\Override]
     public function load(array $configs, ContainerBuilder $container): void
     {
@@ -87,23 +139,6 @@ class DataflowExtension extends Extension
         // `debug:container --parameter` tells the truth about what is active.
         $container->setParameter('dataflow.enabled', true);
 
-        $domain = $config['translation_domain'] ?? 'dataflow';
-
-        if (!\is_string($domain) || '' === $domain) {
-            throw new \LogicException('The "translation_domain" node must be a non-empty string; the configuration tree guarantees it.');
-        }
-
-        $container->setParameter('dataflow.translation_domain', $domain);
-
-        $stimulus = $config['stimulus_identifier'] ?? 'dataflow--report-builder';
-
-        if (!\is_string($stimulus) || '' === $stimulus) {
-            throw new \LogicException('The "stimulus_identifier" node must be a non-empty string; the configuration tree guarantees it.');
-        }
-
-        $container->setParameter('dataflow.stimulus_identifier', $stimulus);
-        $this->exposeTwigGlobals($container, $stimulus, $domain);
-
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yaml');
 
@@ -113,7 +148,9 @@ class DataflowExtension extends Extension
             throw new \LogicException('The "limits" node must be an array; the configuration tree guarantees it.');
         }
 
-        $this->publishLimits($container, $limits);
+        // ⚠️ The parameters are already published by `prepend()`; what is left for `load()` is the
+        // service argument, which needs the definitions that were just loaded.
+        $this->configureLimitsProvider($container, $limits);
     }
 
     /**
@@ -135,7 +172,7 @@ class DataflowExtension extends Extension
      *
      * @param array<array-key, mixed> $limits
      */
-    private function publishLimits(ContainerBuilder $container, array $limits): void
+    private function configureLimitsProvider(ContainerBuilder $container, array $limits): void
     {
         $arguments = [];
 
@@ -148,13 +185,38 @@ class DataflowExtension extends Extension
                 throw new \LogicException(\sprintf('Limit "%s" is missing from the configuration tree.', $node));
             }
 
-            // Both, and that is the whole point: the object is what services read, the parameter is
-            // what an application's own YAML reads.
-            $container->setParameter('dataflow.limits.'.$node, $value);
             $arguments[$argument] = $value;
         }
 
         $container->getDefinition(ConfiguredLimitsProvider::class)
             ->setArgument('$limits', new Definition(Limits::class, $arguments));
+    }
+
+    /**
+     * @param array<array-key, mixed> $config
+     */
+    private static function domain(array $config): string
+    {
+        $domain = $config['translation_domain'] ?? 'dataflow';
+
+        if (!\is_string($domain) || '' === $domain) {
+            throw new \LogicException('The "translation_domain" node must be a non-empty string; the configuration tree guarantees it.');
+        }
+
+        return $domain;
+    }
+
+    /**
+     * @param array<array-key, mixed> $config
+     */
+    private static function stimulus(array $config): string
+    {
+        $stimulus = $config['stimulus_identifier'] ?? 'dataflow--report-builder';
+
+        if (!\is_string($stimulus) || '' === $stimulus) {
+            throw new \LogicException('The "stimulus_identifier" node must be a non-empty string; the configuration tree guarantees it.');
+        }
+
+        return $stimulus;
     }
 }
