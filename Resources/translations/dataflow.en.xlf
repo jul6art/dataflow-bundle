@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    The bundle ships the two keys its boolean transformer reads, in its OWN domain.
+
+    ⚠️ The domain is `dataflow`, never `messages`. A bundle that hard-codes `messages` forces each
+    of its consumers to break the rule this ecosystem enforces — translations split by functional
+    domain, `messages` never a dumping ground. `datatable-bundle` had to gain a configurable domain
+    after the fact, and 165 lines of catalogue moved with it.
+
+    ⚠️ XLIFF rather than YAML, and English rather than French: a published package's default
+    catalogue is the one a consumer overrides, so it has to be the neutral one. A French consumer
+    ships `dataflow.fr.yaml` in its own `translations/` and Symfony merges it over this.
+-->
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+    <file source-language="en" target-language="en" datatype="plaintext" original="dataflow">
+        <body>
+            <trans-unit id="dataflow.value.yes" resname="dataflow.value.yes">
+                <source>dataflow.value.yes</source>
+                <target>Yes</target>
+            </trans-unit>
+            <trans-unit id="dataflow.value.no" resname="dataflow.value.no">
+                <source>dataflow.value.no</source>
+                <target>No</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
