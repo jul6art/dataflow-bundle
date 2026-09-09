@@ -25,6 +25,8 @@ final class SpreadsheetSignatureTest extends TestCase
         yield 'an empty file' => ['', false];
         yield 'three bytes of a ZIP header' => ["PK\x03", false];
         yield 'a ZIP marker that is not at the start' => ["x\x00PK\x03\x04", false];
+        yield 'a ZIP header followed by content' => ["PK\x03\x04 and then the archive", true];
+        yield 'an OLE2 header followed by content' => ["\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1 and then the stream", true];
         yield 'JSON' => ['{"a":1}', false];
         yield 'a PDF' => ["%PDF-1.7\n", false];
     }
@@ -33,6 +35,21 @@ final class SpreadsheetSignatureTest extends TestCase
     public function testTheFirstBytesDecide(string $head, bool $expected): void
     {
         self::assertSame($expected, SpreadsheetSignature::matches($head));
+    }
+
+    /**
+     * ⚠️ `HEAD_BYTES` has to cover the LONGEST signature, and the OLE2 one is exactly eight bytes.
+     * A smaller value would silently stop recognising `.xls` — the format that walked through the
+     * MIME list in the first place — while still recognising ZIP, whose signature is four. So the
+     * assertion is that a head of exactly `HEAD_BYTES` suffices and one byte less does not: the
+     * property, rather than the number.
+     */
+    public function testTheHeadItReadsCoversTheLongestSignature(): void
+    {
+        $ole2 = "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1";
+
+        self::assertTrue(SpreadsheetSignature::matches(substr($ole2.'then the stream', 0, SpreadsheetSignature::HEAD_BYTES)));
+        self::assertFalse(SpreadsheetSignature::matches(substr($ole2, 0, SpreadsheetSignature::HEAD_BYTES - 1)));
     }
 
     public function testAFileIsReadEightBytesDeepAndNoFurther(): void
