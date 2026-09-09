@@ -6,9 +6,17 @@
  * in the bundle's JavaScript is otherwise purged from the PRODUCTION stylesheet and only from that
  * one, which is the worst place to find out.
  *
+ * ⚠️ **Only Tailwind's DEFAULT palette.** The first version of this file applied `bg-sky-50`,
+ * `text-sky-600` and eight siblings — palette names that exist in the theme of the application
+ * it was extracted from and NOWHERE else. Tailwind does not warn: it fails the build with "The
+ * `bg-sky-50` class does not exist", in the consumer's project, on a file the consumer did not
+ * write. `sky` is the accent here; an application with its own brand colour re-declares the four
+ * rules marked ACCENT below, after the import. That is four lines, and it is the only thing a
+ * consumer should ever need to override.
+ *
  * ⚠️ The state of a step lives in `.is-current` / `.is-done`, not in eleven utilities toggled from
  * JavaScript. The implementation this replaces added and removed
- * `bg-primary-50 dark:bg-primary-900/20 border-primary-300 …` by hand across three branches: a
+ * `bg-sky-50 dark:bg-sky-900/20 border-sky-300 …` by hand across three branches: a
  * palette change nobody could make safely, and colour decisions taken inside `vendor/`.
  */
 
@@ -20,13 +28,15 @@
     @apply w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200;
 }
 
+/* ACCENT — re-declare with your own palette if you have one. */
 .step-tab.is-current {
-    @apply bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300;
+    @apply bg-sky-50 dark:bg-sky-900/20 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300;
 }
 
+/* ACCENT */
 .step-tab.is-current .step-tab-bullet,
 .step-tab.is-done .step-tab-bullet {
-    @apply bg-primary-500 text-white;
+    @apply bg-sky-500 text-white;
 }
 
 /* ── The column picker ─────────────────────────────────────────────────────────────────────── */
@@ -117,8 +127,9 @@
     @apply relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-700;
 }
 
+/* ACCENT */
 .dataflow-modal-icon {
-    @apply bg-accent-100 dark:bg-accent-900/40 rounded-full p-2.5 flex-shrink-0 text-xl text-accent-600;
+    @apply bg-sky-100 dark:bg-sky-900/40 rounded-full p-2.5 flex-shrink-0 text-xl text-sky-600;
 }
 
 .dataflow-modal-title {

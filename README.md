@@ -495,6 +495,21 @@ app.register('dataflow--report-builder', ReportBuilder);
 > JavaScript is otherwise purged from the production stylesheet — and only from that one, which is
 > the worst place to find out.
 
+⚠️ **The stylesheet uses Tailwind's default palette only — `sky` is its accent.** A bundle cannot
+apply `bg-primary-50`: that name exists in one application's theme and nowhere else, and Tailwind
+does not warn — it fails **your** build with *"The `bg-primary-50` class does not exist"*, pointing
+at a file in `vendor/` you did not write. (v1.1.0 shipped exactly that.) If you have a brand colour,
+re-declare the three rules marked `ACCENT` after the import:
+
+```css
+@import '@jul6art/dataflow-bundle/styles/dataflow.css';
+
+.step-tab.is-current { @apply bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300; }
+.step-tab.is-current .step-tab-bullet,
+.step-tab.is-done .step-tab-bullet { @apply bg-primary-500 text-white; }
+.dataflow-modal-icon { @apply bg-accent-100 dark:bg-accent-900/40 rounded-full p-2.5 flex-shrink-0 text-xl text-accent-600; }
+```
+
 The markup also uses `jul6art/ui-bundle`'s utility classes: `form-panel`, `form-section-title`,
 `form-fieldset`, `form-control`, `btn-primary`, `btn-secondary`, `panel`.
 
