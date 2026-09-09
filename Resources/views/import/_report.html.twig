@@ -1,0 +1,56 @@
+{#
+    What an import did, as a partial.
+
+        {{ include('@Dataflow/import/_report.html.twig', {report: report}) }}
+
+    ⚠️ **Read `report.isDryRun` before wording the count.** After a dry run nothing was written, so
+    a panel announcing "1 240 imported" is why someone runs the real import a second time.
+
+    ⚠️ **`report.errorCount` is exact; `report.errors` is a sample of at most a hundred.** A file
+    read with the wrong delimiter fails on every row, and keeping fifty thousand entries to render a
+    page nobody reads is the defect the cap exists for — but a screen that shows only the sample
+    implies the file had exactly a hundred problems, so the truncation is said out loud.
+
+    ⚠️ **Every message goes through the translator.** A mapper's refusal is a translation KEY and a
+    validator's is already-rendered text; `|trans` returns an unknown key unchanged, so the one call
+    is right for both.
+#}
+{% if report.isDryRun %}
+    <p class="text-sm text-sky-600 dark:text-sky-400 mb-4">
+        <i class="fa-solid fa-circle-info"></i>
+        {{ 'dataflow.import.result.dry_run'|trans({}, 'dataflow') }}
+    </p>
+{% endif %}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="panel p-4">
+        <p class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ 'dataflow.import.result.imported'|trans({'%count%': report.imported}, 'dataflow') }}</p>
+        <p class="text-2xl font-bold text-emerald-600">{{ report.imported }}</p>
+    </div>
+    <div class="panel p-4">
+        <p class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ 'dataflow.import.result.skipped'|trans({'%count%': report.skipped}, 'dataflow') }}</p>
+        <p class="text-2xl font-bold text-amber-600">{{ report.skipped }}</p>
+    </div>
+    <div class="panel p-4">
+        <p class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ 'dataflow.import.result.errors'|trans({'%count%': report.errorCount}, 'dataflow') }}</p>
+        <p class="text-2xl font-bold text-red-600">{{ report.errorCount }}</p>
+    </div>
+</div>
+
+{% if report.errors is not empty %}
+    <div class="panel p-4 mb-6">
+        <ul class="space-y-1 text-sm text-slate-700 dark:text-slate-300">
+            {% for error in report.errors %}
+                <li>
+                    <span class="text-xs text-slate-500 mr-2 font-mono">{{ error.record }}</span>
+                    {{ error.message|trans({}, 'dataflow') }}
+                </li>
+            {% endfor %}
+        </ul>
+        {% if report.errorsWereTruncated %}
+            <p class="text-xs text-slate-400 mt-3">
+                {{ 'dataflow.import.result.truncated'|trans({'%count%': report.errors|length}, 'dataflow') }}
+            </p>
+        {% endif %}
+    </div>
+{% endif %}

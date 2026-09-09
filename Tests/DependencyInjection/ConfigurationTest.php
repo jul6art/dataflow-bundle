@@ -32,6 +32,7 @@ final class ConfigurationTest extends TestCase
     private const array DEFAULTS = [
         'enabled' => true,
         'translation_domain' => 'dataflow',
+        'stimulus_identifier' => 'dataflow--report-builder',
         'limits' => [
             'report_rows' => 1000,
             'export_rows' => 50000,

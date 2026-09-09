@@ -1,0 +1,142 @@
+/*
+ * The classes the report builder controller emits.
+ *
+ * ⚠️ Tailwind's `@apply`, like the rest of this ecosystem's front end — so the file needs a
+ * Tailwind build, and this bundle's `assets/` has to be in Tailwind's `content`. A class used only
+ * in the bundle's JavaScript is otherwise purged from the PRODUCTION stylesheet and only from that
+ * one, which is the worst place to find out.
+ *
+ * ⚠️ The state of a step lives in `.is-current` / `.is-done`, not in eleven utilities toggled from
+ * JavaScript. The implementation this replaces added and removed
+ * `bg-primary-50 dark:bg-primary-900/20 border-primary-300 …` by hand across three branches: a
+ * palette change nobody could make safely, and colour decisions taken inside `vendor/`.
+ */
+
+.step-tab {
+    @apply flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition border border-transparent;
+}
+
+.step-tab .step-tab-bullet {
+    @apply w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200;
+}
+
+.step-tab.is-current {
+    @apply bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300;
+}
+
+.step-tab.is-current .step-tab-bullet,
+.step-tab.is-done .step-tab-bullet {
+    @apply bg-primary-500 text-white;
+}
+
+/* ── The column picker ─────────────────────────────────────────────────────────────────────── */
+
+.dataflow-field-group {
+    @apply mb-4 break-inside-avoid;
+}
+
+.dataflow-field-group-title {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1 pb-1 border-b border-slate-200 dark:border-slate-700;
+}
+
+.dataflow-field-row {
+    @apply flex items-center gap-2 py-0.5 px-1 rounded cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50;
+}
+
+.dataflow-field-name {
+    @apply text-xs text-slate-700 dark:text-slate-200;
+}
+
+.dataflow-field-badge {
+    @apply text-[10px] text-amber-500 ml-1;
+}
+
+/* ── The ordered selection ─────────────────────────────────────────────────────────────────── */
+
+.dataflow-selected-column {
+    @apply flex flex-col gap-1 py-1.5 px-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50;
+}
+
+.dataflow-selected-column-rank {
+    @apply text-[10px] font-mono text-slate-400 w-5 text-right;
+}
+
+.dataflow-selected-column-source {
+    @apply text-[10px] text-slate-400 pl-7 truncate;
+}
+
+.dataflow-icon-button {
+    @apply text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 text-xs px-1;
+}
+
+/* ⚠️ The disabled state is styled here rather than with an inline `style="opacity:0.3"` written
+   from JavaScript — an inline style cannot be overridden by a consumer's theme. */
+.dataflow-icon-button:disabled {
+    @apply opacity-30 cursor-not-allowed;
+}
+
+.dataflow-icon-button.is-danger {
+    @apply text-red-400 hover:text-red-600;
+}
+
+.dataflow-empty {
+    @apply text-xs text-slate-400 italic;
+}
+
+/* ── Filters ───────────────────────────────────────────────────────────────────────────────── */
+
+.dataflow-filter {
+    @apply rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 p-3 flex flex-wrap items-end gap-3;
+}
+
+.dataflow-filter-conjunction {
+    @apply text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-semibold py-1 pl-2;
+}
+
+.dataflow-filter-label {
+    @apply text-[10px] uppercase tracking-wide text-slate-500 font-semibold;
+}
+
+/* ── Preview ───────────────────────────────────────────────────────────────────────────────── */
+
+.dataflow-preview-th {
+    @apply px-2 py-1 text-left font-medium text-slate-600 dark:text-slate-300;
+}
+
+/* ── Chrome ────────────────────────────────────────────────────────────────────────────────── */
+
+.dataflow-modal {
+    @apply fixed inset-0 z-[100] flex items-center justify-center p-4;
+}
+
+.dataflow-modal-backdrop {
+    @apply absolute inset-0 bg-black/50 backdrop-blur-sm;
+}
+
+.dataflow-modal-panel {
+    @apply relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-700;
+}
+
+.dataflow-modal-icon {
+    @apply bg-accent-100 dark:bg-accent-900/40 rounded-full p-2.5 flex-shrink-0 text-xl text-accent-600;
+}
+
+.dataflow-modal-title {
+    @apply text-base font-semibold text-slate-900 dark:text-slate-100 mb-1;
+}
+
+.dataflow-modal-message {
+    @apply text-sm text-slate-600 dark:text-slate-400;
+}
+
+.dataflow-toast {
+    @apply fixed top-4 right-4 z-[110] border rounded-xl px-4 py-3 text-sm shadow-lg flex items-center gap-2 transition-opacity;
+}
+
+.dataflow-toast.is-success {
+    @apply bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-700 dark:text-emerald-300;
+}
+
+.dataflow-toast.is-error {
+    @apply bg-red-50 border-red-200 text-red-700 dark:bg-red-900/40 dark:border-red-700 dark:text-red-300;
+}

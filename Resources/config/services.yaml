@@ -15,6 +15,12 @@ services:
     Jul6Art\DataflowBundle\Import\HeaderInspector: ~
     Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory: ~
 
+    # ⚠️ Public, unlike everything else here. A consumer's translation guard fetches it from the
+    # container in a TEST — `getContainer()->get(DeclaredTranslationKeys::class)` — and a private
+    # service answers "has been removed or inlined", a message that reads like a bug in the bundle.
+    Jul6Art\DataflowBundle\Translation\DeclaredTranslationKeys:
+        public: true
+
     # ---------------------------------------------------------------- writers and readers
     #
     # Registered on the DEFAULT dialect — RFC 4180, no byte-order mark. A screen destined to be

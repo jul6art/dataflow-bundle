@@ -20,6 +20,7 @@ use Jul6Art\DataflowBundle\Report\ReportRunner;
 use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
 use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
+use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -44,6 +45,8 @@ final class TestKernel extends Kernel
      * @param array<string, mixed> $bundleConfig configuration for the "dataflow" extension
      * @param bool                 $withOrm      registers DoctrineBundle on in-memory SQLite,
      *                                           mapped on Tests/Fixtures/Entity
+     * @param bool                 $withTwig     registers TwigBundle, so the shipped partials can
+     *                                           be RENDERED rather than merely parsed
      * @param string               $uniqueId     keys the build directory, so two scenarios never
      *                                           share a compiled container while identical ones
      *                                           still reuse the cache
@@ -52,6 +55,7 @@ final class TestKernel extends Kernel
         string $environment,
         private readonly array $bundleConfig = [],
         private readonly bool $withOrm = false,
+        private readonly bool $withTwig = false,
         private readonly string $uniqueId = 'default',
     ) {
         // Debug mode installs Symfony's error handler and never removes it, which PHPUnit
@@ -69,6 +73,10 @@ final class TestKernel extends Kernel
 
         if ($this->withOrm) {
             yield new DoctrineBundle();
+        }
+
+        if ($this->withTwig) {
+            yield new TwigBundle();
         }
 
         yield new DataflowBundle();
@@ -124,6 +132,7 @@ final class TestKernel extends Kernel
                     'security.token_storage',
                     'validator',
                     'translator',
+                    'twig',
                     // The bundle's own services. Exposing them is what makes "installed and
                     // inert" observable: private definitions are removed when nothing references
                     // them, so `has()` on an unexposed one answers false whether the bundle
@@ -183,6 +192,13 @@ final class TestKernel extends Kernel
 
         if ($this->withOrm) {
             $this->configureDoctrine($container);
+        }
+
+        if ($this->withTwig) {
+            // The bundle's own `Resources/views` is registered as `@Dataflow` by TwigBundle, and
+            // its `Resources/translations` catalogue is picked up the same way — so nothing has to
+            // be pointed at here, which is exactly what a consumer gets.
+            $container->loadFromExtension('twig', ['strict_variables' => true]);
         }
 
         $container->loadFromExtension('dataflow', $this->bundleConfig);

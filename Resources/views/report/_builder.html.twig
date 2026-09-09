@@ -1,0 +1,183 @@
+{#
+    The report builder, as a PARTIAL.
+
+    ⚠️ A partial and not a page, deliberately. A page carries a layout, a title, a menu entry, a
+    permission check and a breadcrumb — every one of which belongs to the application. What the
+    bundle can own is the body: four steps, their targets, and the wiring to the controller.
+
+    Include it from your own page:
+
+        {{ include('@Dataflow/report/_builder.html.twig', {
+            entities:   report_entities,                                  {# {fqcn: {label: '…'}} #}
+            fields_url: path('app_report_builder_fields'),
+            run_url:    path('app_report_builder_run'),
+            export_url: path('app_report_builder_export'),
+            save_url:   path('app_report_builder_save'),
+            load_url:   path('app_report_builder_load', {id: '__ID__'})|replace({__ID__: '{id}'}),
+            can_share:  is_granted('report:builder:share'),
+        }) }}
+
+    ⚠️ `load_url` must contain the literal `{id}`. Generating it with a placeholder and swapping it
+    back is the readable way to get one out of a router that insists on a real value — the version
+    this replaces generated `id: 0` and had the CONTROLLER patch the URL with a regular expression.
+
+    ⚠️ `can_share` is a boolean the application computes. The bundle must not call `is_granted()`
+    with a permission code it invented: the codes are the project's, and a bundle guessing one gets
+    "false" everywhere, which hides the control on every screen and looks like a broken feature.
+#}
+{% set stimulus = stimulus|default(dataflow_stimulus|default('dataflow--report-builder')) %}
+{% set entities = entities|default({}) %}
+{% set can_share = can_share|default(false) %}
+{% set steps = [
+    {key: 'entity',  target: 'stepEntity',  label: 'dataflow.builder.step.entity',  icon: 'fa-cube'},
+    {key: 'columns', target: 'stepColumns', label: 'dataflow.builder.step.columns', icon: 'fa-list-check'},
+    {key: 'filters', target: 'stepFilters', label: 'dataflow.builder.step.filters', icon: 'fa-filter'},
+    {key: 'export',  target: 'stepExport',  label: 'dataflow.builder.step.export',  icon: 'fa-magnifying-glass-chart'}
+] %}
+
+<div data-controller="{{ stimulus }}"
+     data-{{ stimulus }}-fields-url-value="{{ fields_url|default('') }}"
+     data-{{ stimulus }}-run-url-value="{{ run_url|default('') }}"
+     data-{{ stimulus }}-export-url-value="{{ export_url|default('') }}"
+     data-{{ stimulus }}-save-url-value="{{ save_url|default('') }}"
+     data-{{ stimulus }}-load-url-value="{{ load_url|default('') }}"
+     class="space-y-6">
+
+    {# The stepper. `.step-tab` and its bullet are styled by assets/styles/dataflow.css; the
+       controller only toggles `.is-current` / `.is-done`. #}
+    <div class="form-panel !py-3">
+        <div class="flex items-center gap-1 overflow-x-auto" data-{{ stimulus }}-target="stepTabs">
+            {% for i, step in steps %}
+                <button type="button" class="step-tab" data-step="{{ step.key }}" data-step-index="{{ i }}"
+                        data-action="click->{{ stimulus }}#gotoStep">
+                    <span class="step-tab-bullet">{{ i + 1 }}</span>
+                    <i class="fa-solid {{ step.icon }}"></i>
+                    <span class="font-medium">{{ step.label|trans({}, 'dataflow') }}</span>
+                </button>
+                {% if not loop.last %}
+                    <i class="fa-solid fa-chevron-right text-slate-300 dark:text-slate-600 text-xs"></i>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Step 1 — the root entity #}
+    <div class="form-panel step-panel" data-{{ stimulus }}-target="stepEntity">
+        <h2 class="form-section-title">{{ 'dataflow.builder.entity.heading'|trans({}, 'dataflow') }}</h2>
+        <p class="text-xs text-slate-500 mb-3">{{ 'dataflow.builder.entity.help'|trans({}, 'dataflow') }}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for fqcn, meta in entities %}
+                <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <input type="radio" name="entity" value="{{ fqcn }}"
+                           data-action="change->{{ stimulus }}#entityChanged"
+                           data-{{ stimulus }}-target="entityRadio">
+                    <span class="text-sm font-medium">{{ meta.label|default(fqcn) }}</span>
+                </label>
+            {% else %}
+                {# ⚠️ Not an error state. An empty catalogue is what an application that has
+                   registered no ReportableEntityProviderInterface legitimately shows. #}
+                <p class="text-sm text-slate-500 col-span-3">{{ 'dataflow.builder.entity.empty'|trans({}, 'dataflow') }}</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Step 2 — columns: available on the left, the ordered selection on the right #}
+    <div class="form-panel step-panel" data-{{ stimulus }}-target="stepColumns" hidden>
+        <h2 class="form-section-title">{{ 'dataflow.builder.columns.heading'|trans({}, 'dataflow') }}</h2>
+        <p class="text-xs text-slate-500 mb-3">{{ 'dataflow.builder.columns.help'|trans({}, 'dataflow') }}</p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ 'dataflow.builder.columns.available'|trans({}, 'dataflow') }}</h3>
+                <div data-{{ stimulus }}-target="columnsList" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 max-h-[60vh] overflow-y-auto pr-1"></div>
+            </div>
+            <div>
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">{{ 'dataflow.builder.columns.selected'|trans({}, 'dataflow') }}</h3>
+                <div data-{{ stimulus }}-target="selectedColumnsList" class="space-y-1 max-h-[60vh] overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    {# Step 3 — filters #}
+    <div class="form-panel step-panel" data-{{ stimulus }}-target="stepFilters" hidden>
+        <h2 class="form-section-title">{{ 'dataflow.builder.filters.heading'|trans({}, 'dataflow') }}</h2>
+        <p class="text-xs text-slate-500 mb-3">{{ 'dataflow.builder.filters.help'|trans({}, 'dataflow') }}</p>
+        <div data-{{ stimulus }}-target="filtersList" class="space-y-2"></div>
+        <button type="button" class="btn-secondary mt-3 text-xs" data-action="click->{{ stimulus }}#addFilter">
+            <i class="fa-solid fa-plus"></i> {{ 'dataflow.builder.filters.add'|trans({}, 'dataflow') }}
+        </button>
+    </div>
+
+    {# Step 4 — preview, export, save #}
+    <div class="form-panel step-panel" data-{{ stimulus }}-target="stepExport" hidden>
+        <h2 class="form-section-title">{{ 'dataflow.builder.export.heading'|trans({}, 'dataflow') }}</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <fieldset class="form-fieldset !mb-0">
+                <legend class="text-xs">{{ 'dataflow.builder.export.preview'|trans({}, 'dataflow') }}</legend>
+                <button type="button" class="btn-primary w-full" data-action="click->{{ stimulus }}#preview">
+                    <i class="fa-solid fa-magnifying-glass"></i> {{ 'dataflow.builder.export.preview_run'|trans({}, 'dataflow') }}
+                </button>
+            </fieldset>
+
+            <fieldset class="form-fieldset !mb-0">
+                <legend class="text-xs">{{ 'dataflow.builder.export.section_export'|trans({}, 'dataflow') }}</legend>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" class="btn-secondary text-xs" data-action="click->{{ stimulus }}#exportCsv">
+                        <i class="fa-solid fa-file-csv"></i> CSV
+                    </button>
+                    <button type="button" class="btn-secondary text-xs" data-action="click->{{ stimulus }}#exportXlsx">
+                        <i class="fa-solid fa-file-excel"></i> XLSX
+                    </button>
+                    <button type="button" class="btn-secondary text-xs" data-action="click->{{ stimulus }}#exportJson">
+                        <i class="fa-solid fa-code"></i> JSON
+                    </button>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-fieldset !mb-0">
+                <legend class="text-xs">{{ 'dataflow.builder.export.section_save'|trans({}, 'dataflow') }}</legend>
+                <div class="flex gap-2">
+                    <input type="text" placeholder="{{ 'dataflow.builder.export.name_placeholder'|trans({}, 'dataflow') }}"
+                           data-{{ stimulus }}-target="reportName" class="form-control text-sm flex-1">
+                    <button type="button" class="btn-secondary text-xs whitespace-nowrap" data-action="click->{{ stimulus }}#save">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                </div>
+                {# ⚠️ Hidden without the permission, AND refused by the server. Hiding alone is not a
+                   guard — the payload carries `shareScope` and anyone can set it — but showing a
+                   control the server will downgrade is its own defect. #}
+                {% if can_share %}
+                    <label class="flex items-center gap-2 mt-3 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                        <input type="checkbox" class="rounded"
+                               data-{{ stimulus }}-target="shareToggle"
+                               data-action="change->{{ stimulus }}#toggleShare">
+                        <span>{{ 'dataflow.builder.export.share_scope_organization'|trans({}, 'dataflow') }}</span>
+                    </label>
+                {% endif %}
+            </fieldset>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg"
+             data-{{ stimulus }}-target="previewPanel" hidden>
+            <table class="min-w-full text-xs">
+                <thead class="bg-slate-50 dark:bg-slate-800">
+                    <tr data-{{ stimulus }}-target="previewHeader"></tr>
+                </thead>
+                <tbody data-{{ stimulus }}-target="previewBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Previous / next #}
+    <div class="flex items-center justify-between gap-3 pt-2">
+        <button type="button" class="btn-secondary" data-{{ stimulus }}-target="prevBtn"
+                data-action="click->{{ stimulus }}#prevStep">
+            <i class="fa-solid fa-chevron-left"></i> {{ 'dataflow.builder.step.prev'|trans({}, 'dataflow') }}
+        </button>
+        <span class="text-xs text-slate-400" data-{{ stimulus }}-target="stepIndicator"></span>
+        <button type="button" class="btn-primary" data-{{ stimulus }}-target="nextBtn"
+                data-action="click->{{ stimulus }}#nextStep">
+            {{ 'dataflow.builder.step.next'|trans({}, 'dataflow') }} <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    </div>
+</div>

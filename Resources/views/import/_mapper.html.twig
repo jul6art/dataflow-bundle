@@ -1,0 +1,68 @@
+{#
+    The column-mapping table of an import, as a partial.
+
+    ⚠️ **Keyed by column INDEX, not by header name.** The implementation this replaces emitted
+    `mapping[{{ header }}]`, so a file with two columns both called `email` produced one form field
+    and the second column silently disappeared — the import then read a plausible wrong column for
+    every row. The index is the only identifier a column actually has.
+
+    Include it inside your own form:
+
+        {{ include('@Dataflow/import/_mapper.html.twig', {
+            inspection: inspection,          {# a Jul6Art\DataflowBundle\Import\HeaderInspection #}
+            fields:     mapper.fields(),
+        }) }}
+
+    ⚠️ The partial emits no `<form>`, no CSRF token and no submit button. The action, the token name
+    and the route are the application's, and a bundle that guessed them would be wrong in all three.
+#}
+{% set fields = fields|default([]) %}
+{% set mapping = inspection.mapping|default({}) %}
+{% set ambiguous = inspection.ambiguous|default([]) %}
+
+{% if ambiguous is not empty %}
+    {# ⚠️ Said out loud rather than resolved. Two columns claiming one field is a decision only the
+       person who made the file can take, and picking the last one is how an import reads the wrong
+       column without anybody noticing. #}
+    <p class="text-sm text-amber-600 dark:text-amber-400 mb-3">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{ 'dataflow.import.mapper.ambiguous'|trans({}, 'dataflow') }}
+    </p>
+{% endif %}
+
+{% if inspection.missing|default([]) is not empty %}
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
+        {{ 'dataflow.import.mapper.missing'|trans({'%fields%': inspection.missing|join(', ')}, 'dataflow') }}
+    </p>
+{% endif %}
+
+<table class="min-w-full text-sm">
+    <thead class="text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
+        <tr>
+            <th class="px-2 py-2 text-left">{{ 'dataflow.import.mapper.column'|trans({}, 'dataflow') }}</th>
+            <th class="px-2 py-2 text-left">{{ 'dataflow.import.mapper.field'|trans({}, 'dataflow') }}</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+        {% for index, header in inspection.headers|default([]) %}
+            <tr>
+                <td class="px-2 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">
+                    {{ header }}
+                    {% if index in ambiguous %}
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 ml-1"></i>
+                    {% elseif index not in mapping|keys %}
+                        <span class="text-[10px] text-slate-400 ml-1">{{ 'dataflow.import.mapper.unknown'|trans({}, 'dataflow') }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-2 py-2">
+                    <select name="mapping[{{ index }}]" class="form-control text-sm">
+                        <option value="">{{ 'dataflow.import.mapper.ignore'|trans({}, 'dataflow') }}</option>
+                        {% for field in fields %}
+                            <option value="{{ field }}" {{ mapping[index]|default('') == field ? 'selected' : '' }}>{{ field }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

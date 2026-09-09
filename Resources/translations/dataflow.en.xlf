@@ -46,6 +46,350 @@
                 <source>dataflow.import.error.batch_failed</source>
                 <target>The import stopped: a batch could not be written.</target>
             </trans-unit>
+            <trans-unit id="dataflow.builder.step.indicator" resname="dataflow.builder.step.indicator">
+                <source>dataflow.builder.step.indicator</source>
+                <target>Step %current% of %total%</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.need_entity" resname="dataflow.builder.error.need_entity">
+                <source>dataflow.builder.error.need_entity</source>
+                <target>Pick something to report on first.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.need_column" resname="dataflow.builder.error.need_column">
+                <source>dataflow.builder.error.need_column</source>
+                <target>Pick at least one column.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.not_configured" resname="dataflow.builder.error.not_configured">
+                <source>dataflow.builder.error.not_configured</source>
+                <target>This screen is missing an endpoint. Tell whoever installed it.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.fields_failed" resname="dataflow.builder.error.fields_failed">
+                <source>dataflow.builder.error.fields_failed</source>
+                <target>The available columns could not be loaded.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.preview_failed" resname="dataflow.builder.error.preview_failed">
+                <source>dataflow.builder.error.preview_failed</source>
+                <target>The preview could not be built.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.export_failed" resname="dataflow.builder.error.export_failed">
+                <source>dataflow.builder.error.export_failed</source>
+                <target>The export could not be built.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.save_failed" resname="dataflow.builder.error.save_failed">
+                <source>dataflow.builder.error.save_failed</source>
+                <target>The report could not be saved.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.error.load_failed" resname="dataflow.builder.error.load_failed">
+                <source>dataflow.builder.error.load_failed</source>
+                <target>That saved report could not be loaded.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.group.direct" resname="dataflow.builder.columns.group.direct">
+                <source>dataflow.builder.columns.group.direct</source>
+                <target>This record</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.default" resname="dataflow.builder.columns.default">
+                <source>dataflow.builder.columns.default</source>
+                <target>always included</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.none" resname="dataflow.builder.columns.none">
+                <source>dataflow.builder.columns.none</source>
+                <target>No column selected yet.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.rename" resname="dataflow.builder.columns.rename">
+                <source>dataflow.builder.columns.rename</source>
+                <target>Rename this column</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.move_up" resname="dataflow.builder.columns.move_up">
+                <source>dataflow.builder.columns.move_up</source>
+                <target>Move up</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.move_down" resname="dataflow.builder.columns.move_down">
+                <source>dataflow.builder.columns.move_down</source>
+                <target>Move down</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.remove" resname="dataflow.builder.columns.remove">
+                <source>dataflow.builder.columns.remove</source>
+                <target>Remove this column</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.source_label" resname="dataflow.builder.columns.source_label">
+                <source>dataflow.builder.columns.source_label</source>
+                <target>From</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.and" resname="dataflow.builder.filters.and">
+                <source>dataflow.builder.filters.and</source>
+                <target>and</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.label.field" resname="dataflow.builder.filters.label.field">
+                <source>dataflow.builder.filters.label.field</source>
+                <target>Field</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.label.operator" resname="dataflow.builder.filters.label.operator">
+                <source>dataflow.builder.filters.label.operator</source>
+                <target>Condition</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.label.value" resname="dataflow.builder.filters.label.value">
+                <source>dataflow.builder.filters.label.value</source>
+                <target>Value</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.no_value" resname="dataflow.builder.filters.no_value">
+                <source>dataflow.builder.filters.no_value</source>
+                <target>no value needed</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.remove" resname="dataflow.builder.filters.remove">
+                <source>dataflow.builder.filters.remove</source>
+                <target>Remove this filter</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.between_separator" resname="dataflow.builder.filters.between_separator">
+                <source>dataflow.builder.filters.between_separator</source>
+                <target>and</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.placeholder.field" resname="dataflow.builder.filters.placeholder.field">
+                <source>dataflow.builder.filters.placeholder.field</source>
+                <target>Pick a field…</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.placeholder.value" resname="dataflow.builder.filters.placeholder.value">
+                <source>dataflow.builder.filters.placeholder.value</source>
+                <target>Value</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.placeholder.list" resname="dataflow.builder.filters.placeholder.list">
+                <source>dataflow.builder.filters.placeholder.list</source>
+                <target>Several values, separated by commas</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.placeholder.between_min" resname="dataflow.builder.filters.placeholder.between_min">
+                <source>dataflow.builder.filters.placeholder.between_min</source>
+                <target>From</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.placeholder.between_max" resname="dataflow.builder.filters.placeholder.between_max">
+                <source>dataflow.builder.filters.placeholder.between_max</source>
+                <target>To</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.preview_empty" resname="dataflow.builder.export.preview_empty">
+                <source>dataflow.builder.export.preview_empty</source>
+                <target>Nothing matches these filters.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.save_new_title" resname="dataflow.builder.confirm.save_new_title">
+                <source>dataflow.builder.confirm.save_new_title</source>
+                <target>Save this report?</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.save_new_message" resname="dataflow.builder.confirm.save_new_message">
+                <source>dataflow.builder.confirm.save_new_message</source>
+                <target>It will be added to your saved reports.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.save_confirm" resname="dataflow.builder.confirm.save_confirm">
+                <source>dataflow.builder.confirm.save_confirm</source>
+                <target>Save</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.save_update_title" resname="dataflow.builder.confirm.save_update_title">
+                <source>dataflow.builder.confirm.save_update_title</source>
+                <target>Overwrite this report?</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.save_update_message" resname="dataflow.builder.confirm.save_update_message">
+                <source>dataflow.builder.confirm.save_update_message</source>
+                <target>"%name%" will be replaced by what is on screen.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.update_confirm" resname="dataflow.builder.confirm.update_confirm">
+                <source>dataflow.builder.confirm.update_confirm</source>
+                <target>Overwrite</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.confirm.cancel" resname="dataflow.builder.confirm.cancel">
+                <source>dataflow.builder.confirm.cancel</source>
+                <target>Cancel</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.flash.saved" resname="dataflow.builder.flash.saved">
+                <source>dataflow.builder.flash.saved</source>
+                <target>Report saved.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.flash.updated" resname="dataflow.builder.flash.updated">
+                <source>dataflow.builder.flash.updated</source>
+                <target>Report updated.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.report.default_name" resname="dataflow.report.default_name">
+                <source>dataflow.report.default_name</source>
+                <target>Untitled report</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.eq" resname="dataflow.filter.op.eq">
+                <source>dataflow.filter.op.eq</source>
+                <target>is</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.neq" resname="dataflow.filter.op.neq">
+                <source>dataflow.filter.op.neq</source>
+                <target>is not</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.gt" resname="dataflow.filter.op.gt">
+                <source>dataflow.filter.op.gt</source>
+                <target>is more than</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.gte" resname="dataflow.filter.op.gte">
+                <source>dataflow.filter.op.gte</source>
+                <target>is at least</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.lt" resname="dataflow.filter.op.lt">
+                <source>dataflow.filter.op.lt</source>
+                <target>is less than</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.lte" resname="dataflow.filter.op.lte">
+                <source>dataflow.filter.op.lte</source>
+                <target>is at most</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.like" resname="dataflow.filter.op.like">
+                <source>dataflow.filter.op.like</source>
+                <target>contains</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.in" resname="dataflow.filter.op.in">
+                <source>dataflow.filter.op.in</source>
+                <target>is one of</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.nin" resname="dataflow.filter.op.nin">
+                <source>dataflow.filter.op.nin</source>
+                <target>is none of</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.isNull" resname="dataflow.filter.op.isNull">
+                <source>dataflow.filter.op.isNull</source>
+                <target>is empty</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.isNotNull" resname="dataflow.filter.op.isNotNull">
+                <source>dataflow.filter.op.isNotNull</source>
+                <target>is filled in</target>
+            </trans-unit>
+            <trans-unit id="dataflow.filter.op.between" resname="dataflow.filter.op.between">
+                <source>dataflow.filter.op.between</source>
+                <target>is between</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.result.imported" resname="dataflow.import.result.imported">
+                <source>dataflow.import.result.imported</source>
+                <target>%count% row(s) imported</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.result.skipped" resname="dataflow.import.result.skipped">
+                <source>dataflow.import.result.skipped</source>
+                <target>%count% row(s) skipped</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.result.errors" resname="dataflow.import.result.errors">
+                <source>dataflow.import.result.errors</source>
+                <target>%count% row(s) in error</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.result.truncated" resname="dataflow.import.result.truncated">
+                <source>dataflow.import.result.truncated</source>
+                <target>Only the first %count% errors are listed.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.result.dry_run" resname="dataflow.import.result.dry_run">
+                <source>dataflow.import.result.dry_run</source>
+                <target>Nothing was written: this was a dry run.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.mapper.column" resname="dataflow.import.mapper.column">
+                <source>dataflow.import.mapper.column</source>
+                <target>Column in your file</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.mapper.field" resname="dataflow.import.mapper.field">
+                <source>dataflow.import.mapper.field</source>
+                <target>Maps to</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.mapper.ignore" resname="dataflow.import.mapper.ignore">
+                <source>dataflow.import.mapper.ignore</source>
+                <target>— ignore this column —</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.mapper.ambiguous" resname="dataflow.import.mapper.ambiguous">
+                <source>dataflow.import.mapper.ambiguous</source>
+                <target>Two columns claim this field. Pick which one to use.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.mapper.unknown" resname="dataflow.import.mapper.unknown">
+                <source>dataflow.import.mapper.unknown</source>
+                <target>Not recognised; it will be ignored.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.mapper.missing" resname="dataflow.import.mapper.missing">
+                <source>dataflow.import.mapper.missing</source>
+                <target>No column supplies: %fields%</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.step.entity" resname="dataflow.builder.step.entity">
+                <source>dataflow.builder.step.entity</source>
+                <target>What to report on</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.step.columns" resname="dataflow.builder.step.columns">
+                <source>dataflow.builder.step.columns</source>
+                <target>Columns</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.step.filters" resname="dataflow.builder.step.filters">
+                <source>dataflow.builder.step.filters</source>
+                <target>Filters</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.step.export" resname="dataflow.builder.step.export">
+                <source>dataflow.builder.step.export</source>
+                <target>Preview and export</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.step.prev" resname="dataflow.builder.step.prev">
+                <source>dataflow.builder.step.prev</source>
+                <target>Back</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.step.next" resname="dataflow.builder.step.next">
+                <source>dataflow.builder.step.next</source>
+                <target>Next</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.entity.heading" resname="dataflow.builder.entity.heading">
+                <source>dataflow.builder.entity.heading</source>
+                <target>What do you want to report on?</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.entity.help" resname="dataflow.builder.entity.help">
+                <source>dataflow.builder.entity.help</source>
+                <target>Only what you are allowed to read is listed.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.entity.empty" resname="dataflow.builder.entity.empty">
+                <source>dataflow.builder.entity.empty</source>
+                <target>Nothing is reportable yet.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.heading" resname="dataflow.builder.columns.heading">
+                <source>dataflow.builder.columns.heading</source>
+                <target>Pick your columns</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.help" resname="dataflow.builder.columns.help">
+                <source>dataflow.builder.columns.help</source>
+                <target>Tick a field on the left, then order and rename your selection on the right.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.available" resname="dataflow.builder.columns.available">
+                <source>dataflow.builder.columns.available</source>
+                <target>Available</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.columns.selected" resname="dataflow.builder.columns.selected">
+                <source>dataflow.builder.columns.selected</source>
+                <target>Your report</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.heading" resname="dataflow.builder.filters.heading">
+                <source>dataflow.builder.filters.heading</source>
+                <target>Narrow it down</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.help" resname="dataflow.builder.filters.help">
+                <source>dataflow.builder.filters.help</source>
+                <target>All filters have to match.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.filters.add" resname="dataflow.builder.filters.add">
+                <source>dataflow.builder.filters.add</source>
+                <target>Add a filter</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.heading" resname="dataflow.builder.export.heading">
+                <source>dataflow.builder.export.heading</source>
+                <target>Preview, export, save</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.preview" resname="dataflow.builder.export.preview">
+                <source>dataflow.builder.export.preview</source>
+                <target>Preview</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.preview_run" resname="dataflow.builder.export.preview_run">
+                <source>dataflow.builder.export.preview_run</source>
+                <target>Show the first rows</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.section_export" resname="dataflow.builder.export.section_export">
+                <source>dataflow.builder.export.section_export</source>
+                <target>Download</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.section_save" resname="dataflow.builder.export.section_save">
+                <source>dataflow.builder.export.section_save</source>
+                <target>Save</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.name_placeholder" resname="dataflow.builder.export.name_placeholder">
+                <source>dataflow.builder.export.name_placeholder</source>
+                <target>Name this report</target>
+            </trans-unit>
+            <trans-unit id="dataflow.builder.export.share_scope_organization" resname="dataflow.builder.export.share_scope_organization">
+                <source>dataflow.builder.export.share_scope_organization</source>
+                <target>Share with my colleagues</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

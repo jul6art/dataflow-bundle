@@ -43,6 +43,31 @@ class DataflowExtension extends Extension
         'field_max_depth' => '$fieldMaxDepth',
     ];
 
+    /**
+     * Hands the shipped partials their two settings, without a Twig extension.
+     *
+     * ⚠️ `hasExtension()` works HERE and `has()` does not: other bundles' EXTENSIONS are all
+     * registered before any `load()` runs, whereas their services are not — which is the same
+     * distinction that puts service checks in a compiler pass.
+     *
+     * ⚠️ Globals rather than an extension with two functions: `twig/twig` is a suggested package,
+     * so a Twig extension class would have to be registered conditionally anyway, and a global is
+     * one line the consumer can also override in their own `twig.yaml`.
+     */
+    private function exposeTwigGlobals(ContainerBuilder $container, string $stimulus, string $domain): void
+    {
+        if (!$container->hasExtension('twig')) {
+            return;
+        }
+
+        $container->prependExtensionConfig('twig', [
+            'globals' => [
+                'dataflow_stimulus' => $stimulus,
+                'dataflow_domain' => $domain,
+            ],
+        ]);
+    }
+
     #[\Override]
     public function load(array $configs, ContainerBuilder $container): void
     {
@@ -69,6 +94,15 @@ class DataflowExtension extends Extension
         }
 
         $container->setParameter('dataflow.translation_domain', $domain);
+
+        $stimulus = $config['stimulus_identifier'] ?? 'dataflow--report-builder';
+
+        if (!\is_string($stimulus) || '' === $stimulus) {
+            throw new \LogicException('The "stimulus_identifier" node must be a non-empty string; the configuration tree guarantees it.');
+        }
+
+        $container->setParameter('dataflow.stimulus_identifier', $stimulus);
+        $this->exposeTwigGlobals($container, $stimulus, $domain);
 
         $loader = new YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yaml');

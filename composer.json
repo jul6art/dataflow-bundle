@@ -28,6 +28,7 @@
     "require-dev": {
         "doctrine/doctrine-bundle": "^3.3",
         "friendsofphp/php-cs-fixer": "^3.68",
+        "jul6art/core-bundle": "^2.14",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-doctrine": "^2.0",
@@ -84,5 +85,11 @@
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         }
+    },
+    "suggest": {
+        "jul6art/core-bundle": "Required by the shipped Stimulus controller, which reads its labels through @jul6art/core-bundle/i18n/registry. Server-side use needs nothing of it.",
+        "symfony/twig-bundle": "Renders the shipped Twig partials. Without it only the PHP engine is available.",
+        "jul6art/audit-bundle": "Gives ExportAuditorInterface something to write to. Without it exports are not journalled.",
+        "symfony/messenger": "Will carry asynchronous imports. Not used yet."
     }
 }

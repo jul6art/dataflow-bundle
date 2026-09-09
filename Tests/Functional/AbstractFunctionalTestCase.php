@@ -60,10 +60,12 @@ abstract class AbstractFunctionalTestCase extends TestCase
         string $environment = 'test',
         array $bundleConfig = [],
         bool $withOrm = false,
+        bool $withTwig = false,
     ): ContainerInterface {
         $uniqueId = substr(md5(serialize([
             $bundleConfig,
             $withOrm,
+            $withTwig,
             self::sourceFingerprint(),
         ])), 0, 12);
 
@@ -73,6 +75,7 @@ abstract class AbstractFunctionalTestCase extends TestCase
             $environment,
             $bundleConfig,
             withOrm: $withOrm,
+            withTwig: $withTwig,
             uniqueId: $uniqueId,
         );
         $this->kernel->boot();

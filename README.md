@@ -53,6 +53,10 @@ dataflow:
     # The catalogue the bundle's own keys are looked up in. Never `messages`.
     translation_domain: dataflow
 
+    # The Stimulus identifier the report builder answers to. It decides the data-attribute prefix
+    # the shipped partial emits, so it has to match how you registered the controller.
+    stimulus_identifier: dataflow--report-builder
+
     # Applied when no LimitsProviderInterface is bound. These are the defaults.
     limits:
         report_rows: 1000            # rows a run returns when the caller asks for no limit
@@ -412,6 +416,119 @@ its bytes as text. Reading XLSX is a later lot; until then the message tells the
 
 ⚠️ Detection is by CONTENT, never by MIME type: a browser sends `application/vnd.ms-excel` for a
 CSV saved out of Excel, so a MIME allow list that admits it admits real `.xls` workbooks too.
+
+The screens
+-----------
+
+The bundle ships the **body** of the report builder and of an import's mapping and result panels —
+not the pages. A page carries a layout, a title, a menu entry, a permission check and a breadcrumb,
+every one of which is the application's.
+
+### 1. Register the controller and the stylesheet
+
+```js
+// assets/bootstrap.js — or however your build registers controllers
+import ReportBuilder from '@jul6art/dataflow-bundle/controllers/report_builder_controller';
+
+app.register('dataflow--report-builder', ReportBuilder);
+```
+
+```css
+@import '@jul6art/dataflow-bundle/styles/dataflow.css';
+```
+
+> ⚠️ **Add this bundle's `assets/` to Tailwind's `content`.** A class used only in the bundle's
+> JavaScript is otherwise purged from the production stylesheet — and only from that one, which is
+> the worst place to find out.
+
+The markup also uses `jul6art/ui-bundle`'s utility classes: `form-panel`, `form-section-title`,
+`form-fieldset`, `form-control`, `btn-primary`, `btn-secondary`, `panel`.
+
+### 2. Hand the controller your translator
+
+```js
+// assets/app.js
+import { trans } from './translator';
+import { registerTranslator } from '@jul6art/core-bundle/i18n/registry';
+
+registerTranslator((key, parameters) => trans(key, parameters, 'javascript'));
+```
+
+⚠️ **A controller shipped inside `vendor/` cannot import your `assets/translator.js`** — the
+relative path out of `vendor/` does not exist, and hard-coding one would tie the bundle to one
+application's layout. So the application hands its translator over once, at boot, and every bundle
+reads through the registry.
+
+⚠️ **Never through an HTML attribute.** Posting a translation tree into `data-…-translations-value`
+is how labels used to reach JavaScript here; it measured 8.7 kB of escaped HTML per page and was
+removed.
+
+### 3. Include the partial
+
+```twig
+{{ include('@Dataflow/report/_builder.html.twig', {
+    entities:   report_entities,
+    fields_url: path('app_report_builder_fields'),
+    run_url:    path('app_report_builder_run'),
+    export_url: path('app_report_builder_export'),
+    save_url:   path('app_report_builder_save'),
+    load_url:   path('app_report_builder_load', {id: '__ID__'})|replace({__ID__: '{id}'}),
+    can_share:  is_granted('report:builder:share'),
+}) }}
+```
+
+⚠️ **Every endpoint is a parameter, and `load_url` must contain the literal `{id}`.** The
+implementation this is extracted from hard-coded four URLs, so the controller could only ever live
+in one application mounted under one prefix — and it patched an id into the fifth with a regular
+expression, because the route had been generated with `id: 0`.
+
+⚠️ **`can_share` is a boolean you compute.** The bundle must not call `is_granted()` with a
+permission code it invented: the codes are yours, and a guessed one answers false everywhere, which
+hides the control on every screen and looks like a broken feature. Hiding it is not the guard
+either — the payload carries `shareScope`, so the server has to refuse it too.
+
+### 4. Wire the busy state, if you have an overlay
+
+```js
+document.addEventListener('dataflow:busy', (e) => { /* your loader, on e.detail.element */ });
+document.addEventListener('dataflow:idle', (e) => { /* take it down */ });
+```
+
+⚠️ The controller dispatches events rather than calling a loader mixin. The version it replaces
+imported one from `datatable-bundle` — which would have made a report builder depend on a datatable
+library for a spinner. The application decides what busy *looks* like; the controller only says
+when it is.
+
+### The import panels
+
+```twig
+{{ include('@Dataflow/import/_mapper.html.twig', {inspection: inspection, fields: mapper.fields()}) }}
+{{ include('@Dataflow/import/_report.html.twig', {report: report}) }}
+```
+
+The mapper emits no `<form>`, no CSRF token and no submit button: the action, the token name and the
+route are yours.
+
+⚠️ **Its fields are named `mapping[<index>]`, by column index.** A name-keyed mapping loses one of
+two columns called `email`, and the import then reads a plausible wrong column for every row.
+
+### Translation keys
+
+Every key starts with `dataflow.` and the bundle ships the English catalogue. Two families are read
+through a variable and so are invisible to a scanner — the twelve filter operator labels and the
+four step labels — and `DeclaredTranslationKeys` names them for your guard:
+
+```php
+protected static function declaredKeys(): array
+{
+    return static::getContainer()->get(DeclaredTranslationKeys::class)->keys();
+}
+```
+
+⚠️ **A ternary goes outside the lookup, never inside it.** A condition in the argument position
+hides both keys from a scanner, so a catalogue clean-up deletes entries the screen renders. The
+screen this is extracted from displayed **thirty-four raw keys** across its whole surface, in
+production, with every test green — because each half was only ever asserted against itself.
 
 Quality assurance
 -----------------
