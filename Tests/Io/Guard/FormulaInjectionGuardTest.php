@@ -71,6 +71,13 @@ final class FormulaInjectionGuardTest extends TestCase
         yield 'negative French decimal' => ['-100,00'];
         yield 'signed positive French decimal' => ['+100,00'];
         yield 'unsigned French decimal' => ['1234,56'];
+        // ⚠️ A negative amount BELOW one unit. Its integer part is `0`, and that is the whole
+        // point: the obvious hand-rolled alternative to `is_numeric()` — a regex along the lines of
+        // `/^[+-]?[1-9]/` — accepts `-100.00` and rejects this one, so `-100.00` alone does not pin
+        // the behaviour down. Carried over from the third consumer's own test before its copy was
+        // deleted; a cent is what its money type produces most often.
+        yield 'negative decimal below one' => ['-0.01'];
+        yield 'negative French decimal below one' => ['-0,01'];
     }
 
     /**
