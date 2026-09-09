@@ -108,7 +108,15 @@ final class XlsxWriterTest extends TestCase
     }
 
     /**
-     * Reads `xl/worksheets/sheet1.xml` out of the archive — where OpenSpout puts cell values.
+     * Reads `xl/worksheets/sheet1.xml` out of the archive — where OpenSpout puts cell values — and
+     * DECODES its entities.
+     *
+     * ⚠️ The decoding is what makes the assertions version-independent, and the CI's `lowest deps`
+     * job is what said so. Recent OpenSpout writes the text marker as a literal `'`; the oldest
+     * version this bundle accepts writes it as `&#039;`. The guard behaves identically in both — it
+     * is the XML escaping of a dependency that differs — so an assertion on the raw markup was
+     * coupled to a version rather than to the property under test. Four green `composer qa` runs
+     * did not see it.
      */
     private function sheetXml(string $archive): string
     {
@@ -124,7 +132,7 @@ final class XlsxWriterTest extends TestCase
 
             self::assertIsString($strings, 'The archive carries a worksheet.');
 
-            return $strings;
+            return html_entity_decode($strings, \ENT_QUOTES | \ENT_XML1, 'UTF-8');
         } finally {
             @unlink($path);
         }
