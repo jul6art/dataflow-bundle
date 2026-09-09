@@ -209,6 +209,33 @@ does use `JSON_THROW_ON_ERROR`: with `json_encode`'s default, a malformed UTF-8 
 column returns `false`, emits the empty string, and produces a syntactically valid document
 silently missing a row — the worst available outcome.
 
+### Resolving a format code to a writer
+
+```php
+public function __construct(
+    #[AutowireIterator(tag: 'dataflow.tabular_writer')]
+    private readonly iterable $writers,
+) {}
+
+private function writer(string $format): TabularWriterInterface
+{
+    foreach ($this->writers as $writer) {
+        if ($writer->code() === $format) {
+            return $writer;
+        }
+    }
+
+    throw new \InvalidArgumentException(...);
+}
+```
+
+The three writers carry `dataflow.tabular_writer`, `CsvReader` carries `dataflow.tabular_reader`,
+and your own implementation of either interface is autoconfigured onto the same tag — a fixed-width
+format a customer imposes joins the iterator by existing.
+
+⚠️ v1.0.x shipped them untagged, so the first consumer had to hand-roll the list of three. That is
+the duplication this bundle exists to remove.
+
 ### Serving it as a download
 
 ```php

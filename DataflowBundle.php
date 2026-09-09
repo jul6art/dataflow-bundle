@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Jul6Art\DataflowBundle;
 
 use Jul6Art\DataflowBundle\DependencyInjection\Compiler\OptionalContractPass;
+use Jul6Art\DataflowBundle\Io\Reader\TabularReaderInterface;
+use Jul6Art\DataflowBundle\Io\TabularWriterInterface;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntityProviderInterface;
 use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -52,5 +54,13 @@ class DataflowBundle extends Bundle
 
         $container->registerForAutoconfiguration(ValueTransformerInterface::class)
             ->addTag('dataflow.value_transformer');
+
+        // A consumer's own writer or reader — an application-specific fixed-width format, a
+        // customer's imposed layout — joins the tagged iterator by existing.
+        $container->registerForAutoconfiguration(TabularWriterInterface::class)
+            ->addTag('dataflow.tabular_writer');
+
+        $container->registerForAutoconfiguration(TabularReaderInterface::class)
+            ->addTag('dataflow.tabular_reader');
     }
 }

@@ -8,6 +8,7 @@ use Jul6Art\DataflowBundle\Import\HeaderInspector;
 use Jul6Art\DataflowBundle\Import\ImportRunner;
 use Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory;
 use Jul6Art\DataflowBundle\Io\Reader\CsvReader;
+use Jul6Art\DataflowBundle\Io\TabularWriterInterface;
 use Jul6Art\DataflowBundle\Port\ConfiguredLimitsProvider;
 use Jul6Art\DataflowBundle\Port\ExportAuditorInterface;
 use Jul6Art\DataflowBundle\Port\LimitsProviderInterface;
@@ -17,6 +18,7 @@ use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
 use Jul6Art\DataflowBundle\Report\ReportRunner;
 use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
+use Jul6Art\DataflowBundle\Tests\Fixtures\TaggedWriters;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use Twig\Environment;
 
@@ -42,6 +44,26 @@ final class WiringTest extends AbstractFunctionalTestCase
         self::assertInstanceOf(HeaderInspector::class, $container->get(HeaderInspector::class));
         self::assertInstanceOf(TabularResponseFactory::class, $container->get(TabularResponseFactory::class));
         self::assertInstanceOf(CsvReader::class, $container->get(CsvReader::class));
+    }
+
+    /**
+     * ⚠️ The three writers and the reader are TAGGED, so a consumer resolves a format code with a
+     * tagged iterator. v1.0.x shipped them untagged, and the first consumer had to hand-roll the
+     * list of three — which is the duplication this bundle exists to remove.
+     */
+    public function testEveryWriterAndReaderIsTaggedForATaggedIterator(): void
+    {
+        $container = $this->boot();
+        $writers = $container->get(TaggedWriters::class);
+        self::assertInstanceOf(TaggedWriters::class, $writers);
+
+        $codes = array_map(
+            static fn (TabularWriterInterface $writer): string => $writer->code(),
+            iterator_to_array($writers->writers),
+        );
+        sort($codes);
+
+        self::assertSame(['csv', 'json', 'xlsx'], $codes);
     }
 
     /**

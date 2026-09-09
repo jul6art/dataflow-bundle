@@ -27,10 +27,21 @@ services:
     # double-clicked in France builds `new CsvWriter(CsvDialect::excelFr())` at its call site, where
     # the choice of recipient is visible; a container-wide default would settle that question for
     # every export at once, which is the mistake the dialect object exists to undo.
-    Jul6Art\DataflowBundle\Io\Writer\CsvWriter: ~
-    Jul6Art\DataflowBundle\Io\Writer\XlsxWriter: ~
-    Jul6Art\DataflowBundle\Io\Writer\JsonWriter: ~
-    Jul6Art\DataflowBundle\Io\Reader\CsvReader: ~
+    #
+    # ⚠️ Tagged, so a consumer can resolve a format code to a writer with a tagged iterator instead
+    # of listing the three by hand. Untagged — which is how v1.0.x shipped — the first consumer had
+    # to hand-roll that list, which is the duplication this bundle exists to remove.
+    Jul6Art\DataflowBundle\Io\Writer\CsvWriter:
+        tags: ['dataflow.tabular_writer']
+
+    Jul6Art\DataflowBundle\Io\Writer\XlsxWriter:
+        tags: ['dataflow.tabular_writer']
+
+    Jul6Art\DataflowBundle\Io\Writer\JsonWriter:
+        tags: ['dataflow.tabular_writer']
+
+    Jul6Art\DataflowBundle\Io\Reader\CsvReader:
+        tags: ['dataflow.tabular_reader']
 
     # ---------------------------------------------------------------- ports, with their defaults
     #

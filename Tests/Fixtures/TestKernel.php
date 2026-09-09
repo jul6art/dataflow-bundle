@@ -22,6 +22,7 @@ use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -212,6 +213,12 @@ final class TestKernel extends Kernel
         }
 
         $container->loadFromExtension('dataflow', $this->bundleConfig);
+
+        // A consumer of the writer tag, so a test can see what a tagged iterator actually collects.
+        $container
+            ->register(TaggedWriters::class, TaggedWriters::class)
+            ->setArguments([new TaggedIteratorArgument('dataflow.tabular_writer')])
+            ->setPublic(true);
     }
 
     /**
