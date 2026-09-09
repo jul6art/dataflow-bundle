@@ -22,6 +22,30 @@
                 <source>dataflow.value.no</source>
                 <target>No</target>
             </trans-unit>
+            <trans-unit id="dataflow.import.error.file_unreadable" resname="dataflow.import.error.file_unreadable">
+                <source>dataflow.import.error.file_unreadable</source>
+                <target>The file could not be opened.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.empty_file" resname="dataflow.import.error.empty_file">
+                <source>dataflow.import.error.empty_file</source>
+                <target>The file is empty.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.binary_spreadsheet" resname="dataflow.import.error.binary_spreadsheet">
+                <source>dataflow.import.error.binary_spreadsheet</source>
+                <target>This is a spreadsheet, not a text file. Save it as CSV and upload it again.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.row_cap_reached" resname="dataflow.import.error.row_cap_reached">
+                <source>dataflow.import.error.row_cap_reached</source>
+                <target>The file exceeds the maximum number of rows; the rest was not read.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.duplicate" resname="dataflow.import.error.duplicate">
+                <source>dataflow.import.error.duplicate</source>
+                <target>This record already exists.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.batch_failed" resname="dataflow.import.error.batch_failed">
+                <source>dataflow.import.error.batch_failed</source>
+                <target>The import stopped: a batch could not be written.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

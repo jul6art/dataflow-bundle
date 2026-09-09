@@ -15,8 +15,14 @@ namespace Jul6Art\DataflowBundle\Io;
  * docblock promised streaming. With a 50 000-row ceiling and ten columns, the process held two
  * complete copies before emitting its first byte.
  *
- * A caller therefore passes a `Generator`, and a test asserts the TYPE — `assertInstanceOf` — not
- * the content. Asserting the content is what let the defect survive: every row was correct.
+ * A caller therefore passes a `Generator` — and asserting the content is what let the defect
+ * survive, since every row was correct either way.
+ *
+ * ⚠️ **Asserting the TYPE does not prove it either**, which this file used to recommend. A body
+ * that builds the whole array and then `yield from`s it is still a generator function, so
+ * `assertInstanceOf(\Generator::class)` stays green through exactly the change it was meant to
+ * catch. What discriminates is peak memory, measured: on 6 000 rows the streaming path costs
+ * nothing measurable and the materialising one costs 4 MB.
  *
  * ⚠️ **`$emit` receives chunks, not a document.** A CSV writer calls it per row. A spreadsheet
  * writer cannot — a workbook is a ZIP archive and its central directory is written last — so it

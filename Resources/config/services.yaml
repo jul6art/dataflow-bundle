@@ -4,3 +4,11 @@ services:
     # Anything conditional — a brick that needs an optional package, or a service the
     # application may not have — is registered from the extension or removed by a compiler
     # pass instead. Cf. DependencyInjection/DataflowExtension.php.
+
+    # ⚠️ Nothing is registered yet, and that is a known gap rather than an omission: the report and
+    # import runners both need `Doctrine\ORM\EntityManagerInterface`, which only exists in an
+    # application that installs doctrine-bundle — a package this bundle deliberately does not
+    # require. A service that needs another SERVICE to exist is decided in a compiler pass, not in
+    # the extension, so the wiring lands with the ports (lot 1.4) alongside the pass that removes it
+    # when Doctrine is absent. Until then a consumer instantiates the runners itself, which is what
+    # the README shows.

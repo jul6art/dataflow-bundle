@@ -238,6 +238,110 @@ catalogue entry per look-up table would make the catalogue unusable.
 ⚠️ **The catalogue lists selectable SCALARS.** `customer` alone is not a path; a null check on a
 relation goes through its identifier (`customer.id IS NULL`).
 
+Importing
+---------
+
+### Reading a file
+
+```php
+use Jul6Art\DataflowBundle\Io\Dialect\CsvDialect;
+use Jul6Art\DataflowBundle\Io\Reader\CsvReader;
+
+$reader = new CsvReader(CsvDialect::excelFr());
+
+foreach ($reader->read($path) as $record => $cells) {
+    // $record is 1-based and the header is record 1
+}
+```
+
+A reader carries its dialect in its constructor, exactly as a writer does, and yields a
+`Generator` — reading a 40 MB file costs one record of memory.
+
+⚠️ **The key is a RECORD number, not a line number.** A quoted field may contain newlines, so one
+record can span several lines of the file. A blank line yields nothing and still consumes its
+number, so every later number keeps pointing at the right row.
+
+### The mapping screen
+
+```php
+use Jul6Art\DataflowBundle\Import\HeaderInspector;
+
+$inspector = new HeaderInspector();
+$headers = $inspector->peek($reader, $path);          // reads ONE record
+$inspection = $inspector->inspect($headers, $mapper->fields());
+
+$inspection->mapping;     // [0 => 'firstName', 2 => 'email'] — column INDEX → field
+$inspection->ambiguous;   // indices whose header collides with another's
+$inspection->unknown;     // indices no field matched — normal, not an error
+$inspection->missing;     // fields no column supplied
+```
+
+`First Name`, `first_name`, `FIRSTNAME`, `Prénom` and `Email *` all match: headers and field keys
+are reduced to lower-case alphanumerics, accents folded through an explicit table, before being
+compared.
+
+⚠️ **The mapping is keyed by column INDEX, not by header name.** A file with two columns both
+called `email` collapses into one entry in a name-keyed map and the second silently wins — the
+import then reads the wrong column and every row is subtly wrong rather than obviously broken.
+
+⚠️ **A collision is reported, never resolved.** Both columns are left out of the suggestion so the
+screen can ask. And matching stops at exact-after-normalisation: `Email *` matches, `Job Title
+(optional)` does not, because substring matching would suggest the e-mail column for `Email
+(invalid)` — and a suggestion the user accepts without reading is worse than no suggestion.
+
+### Running an import
+
+```php
+use Jul6Art\DataflowBundle\Import\ImportRunner;
+use Jul6Art\DataflowBundle\Import\Spec\ImportSpec;
+
+$spec = new ImportSpec($path, $inspection->mapping, dryRun: true);
+$report = $runner->run($spec, $mapper, $reader, $resolver);
+
+$report->imported();            // rows that would land — see isDryRun() before wording this
+$report->skipped();
+$report->errorCount();          // exact
+$report->errors();              // the first 100
+$report->errorsWereTruncated();
+```
+
+The application supplies two things and the engine does the rest:
+
+| You write | Why it cannot be configuration |
+| --- | --- |
+| `RowMapperInterface` | "what does a row of this file mean for this entity" is business: a tenant to attach, a default status, a referential to look up |
+| `DuplicateResolverInterface` *(optional)* | only your schema knows what makes two records the same |
+
+### The five traps the runner handles for you
+
+| Trap | What it does |
+| --- | --- |
+| the unit of work growing with the file | `detach()`es what it persisted after each flush — **not** `clear()`, which would detach the caller's own tenant and make the next flush raise *"A new entity was found through the relationship"* |
+| one `SELECT` per row | `findExisting()` takes the whole batch and is expected to answer in one query |
+| two identical rows in one file | neither is in the database when the batch is queried, so both would be persisted and the flush would die on the unique index — `keyOf()` lets the runner skip the second |
+| a dry run that disagrees with the run | the in-file duplicate is counted the same way in both, so the preview does not lie |
+| a batch failing halfway | `atomic: true` (the default) wraps the run in one transaction; `ImportFailedException` carries the partial report and says whether it was rolled back |
+
+⚠️ **A mapper throws `\DomainException` with a TRANSLATION KEY as its message.** The runner catches
+it and puts it in the report next to the record number; an uncaught exception would end the import
+on one bad row.
+
+⚠️ **A validation error is already-rendered text, not a key** — the validator translates its own
+messages. Pass every report message through the translator, which returns an unknown key unchanged;
+that one call is right for both cases.
+
+⚠️ **A dry run is not a rollback.** Nothing is persisted, so no trigger fires and no sequence
+advances — and a constraint only the database knows about is not caught. What it does catch is
+every row the mapper or the validator would reject.
+
+### A spreadsheet uploaded instead of a CSV
+
+`CsvReader` refuses it by name — `dataflow.import.error.binary_spreadsheet` — instead of reading
+its bytes as text. Reading XLSX is a later lot; until then the message tells the user what to do.
+
+⚠️ Detection is by CONTENT, never by MIME type: a browser sends `application/vnd.ms-excel` for a
+CSV saved out of Excel, so a MIME allow list that admits it admits real `.xls` workbooks too.
+
 Quality assurance
 -----------------
 

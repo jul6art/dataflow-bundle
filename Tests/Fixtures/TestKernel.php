@@ -109,6 +109,7 @@ final class TestKernel extends Kernel
                     'event_dispatcher',
                     'request_stack',
                     'security.token_storage',
+                    'validator',
                     // Add the bundle's own services here as the tests need them.
                 ];
 
@@ -139,6 +140,10 @@ final class TestKernel extends Kernel
             'http_method_override' => false,
             'handle_all_throwables' => true,
             'php_errors' => ['log' => true],
+            // The import runner validates every mapped entity before persisting it, so the
+            // container has to carry a validator — attributes on, since that is how a consumer's
+            // entities declare their constraints.
+            'validation' => ['enabled' => true, 'enable_attributes' => true],
         ]);
 
         if ($this->withOrm) {
