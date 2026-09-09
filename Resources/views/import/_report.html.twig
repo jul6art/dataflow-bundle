@@ -11,9 +11,14 @@
     page nobody reads is the defect the cap exists for — but a screen that shows only the sample
     implies the file had exactly a hundred problems, so the truncation is said out loud.
 
-    ⚠️ **Every message goes through the translator.** A mapper's refusal is a translation KEY and a
-    validator's is already-rendered text; `|trans` returns an unknown key unchanged, so the one call
-    is right for both.
+    ⚠️ **Every message is translated in the domain its own PREFIX names**, and that is not
+    cleverness for its own sake. A report mixes three kinds of message: this bundle's keys
+    (`dataflow.import.error.duplicate`), the consumer's mapper keys (`crm.import.error.missing_name`)
+    and a validator's already-rendered text. Translating them all in `dataflow` — which this partial
+    did until v1.3.2 — printed the consumer's keys RAW on the page: the domain existed, the key did
+    not. Deriving the domain from the first segment is exact for the first two, and harmless for the
+    third: an unknown domain makes the translator return the string unchanged, which is what a
+    rendered message wants anyway.
 #}
 {% if report.isDryRun %}
     <p class="text-sm text-sky-600 dark:text-sky-400 mb-4">
@@ -43,7 +48,7 @@
             {% for error in report.errors %}
                 <li>
                     <span class="text-xs text-slate-500 mr-2 font-mono">{{ error.record }}</span>
-                    {{ error.message|trans({}, 'dataflow') }}
+                    {{ error.message|trans({}, error.message|split('.')|first) }}
                 </li>
             {% endfor %}
         </ul>

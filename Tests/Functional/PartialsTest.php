@@ -177,6 +177,36 @@ final class PartialsTest extends AbstractFunctionalTestCase
         self::assertStringContainsString('320', $html, 'The exact count, not the sample size.');
     }
 
+    /**
+     * ⚠️ The defect this pins: a consumer's mapper key printed RAW because the partial translated
+     * every message in `dataflow`, where the key does not exist. A report legitimately mixes this
+     * bundle's keys, the consumer's, and a validator's already-rendered text — so the domain comes
+     * from the message's own first segment.
+     */
+    public function testAMessageIsTranslatedInTheDomainItsPrefixNames(): void
+    {
+        $report = new ImportReport();
+        $report->recordError(2, 'dataflow.import.error.duplicate');
+        $report->recordError(3, 'consumer.import.error.its_own_key');
+        $report->recordError(4, 'email: This value is not a valid email address.');
+
+        $html = $this->render('@Dataflow/import/_report.html.twig', ['report' => $report]);
+
+        // This bundle's own key resolves against its own catalogue…
+        self::assertStringContainsString('This record already exists.', $html);
+
+        // …and a consumer's key is looked up in the CONSUMER's domain, which
+        // `Tests/Fixtures/translations/consumer.en.xlf` provides. ⚠️ That fixture is what makes this
+        // assertion discriminate: with no resolvable consumer domain, an unknown key comes back
+        // unchanged whichever domain is used, so hard-coding `dataflow` passed too. Verified by
+        // mutation, after the first version of this test let it through.
+        self::assertStringContainsString('A refusal worded by the consumer.', $html);
+        self::assertStringNotContainsString('consumer.import.error.its_own_key', $html);
+
+        // …and a rendered validator message survives verbatim.
+        self::assertStringContainsString('This value is not a valid email address.', $html);
+    }
+
     private function reportWithEverything(): ImportReport
     {
         $report = new ImportReport();

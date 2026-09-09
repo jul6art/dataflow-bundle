@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    A stand-in for a CONSUMER's own catalogue.
+
+    ⚠️ It exists so that one assertion can discriminate. The shipped import-report partial derives a
+    message's translation domain from the message's own first segment; asserting that with a key
+    nobody translates proves nothing — an unknown key comes back unchanged whatever domain is used,
+    so hard-coding `dataflow` passes too. That mutation survived, and this file is what kills it: the
+    key below resolves to real wording ONLY when the domain is derived.
+-->
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+    <file source-language="en" target-language="en" datatype="plaintext" original="consumer">
+        <body>
+            <trans-unit id="consumer.import.error.its_own_key" resname="consumer.import.error.its_own_key">
+                <source>consumer.import.error.its_own_key</source>
+                <target>A refusal worded by the consumer.</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

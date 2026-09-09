@@ -466,9 +466,11 @@ The application supplies two things and the engine does the rest:
 it and puts it in the report next to the record number; an uncaught exception would end the import
 on one bad row.
 
-⚠️ **A validation error is already-rendered text, not a key** — the validator translates its own
-messages. Pass every report message through the translator, which returns an unknown key unchanged;
-that one call is right for both cases.
+⚠️ **A report mixes three kinds of message**, and the shipped partial handles all three: this
+bundle's keys, your mapper's keys (in YOUR domain), and a validator's already-rendered text. Each is
+translated in the domain its own first segment names — translating them all in `dataflow` printed a
+consumer's keys raw on the page, which is what v1.3.2 fixes. If you render the report yourself, do
+the same.
 
 ⚠️ **A dry run is not a rollback.** Nothing is persisted, so no trigger fires and no sequence
 advances — and a constraint only the database knows about is not caught. What it does catch is

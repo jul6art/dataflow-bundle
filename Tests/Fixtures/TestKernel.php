@@ -192,7 +192,14 @@ final class TestKernel extends Kernel
             // `BoolValueTransformer` renders two catalogue keys, so the translator is a hard
             // dependency of the bundle rather than an optional one — and a container without it
             // would not compile.
-            'translator' => ['default_path' => '%kernel.project_dir%/Resources/translations'],
+            'translator' => [
+                'default_path' => '%kernel.project_dir%/Resources/translations',
+                // ⚠️ A stand-in for a CONSUMER's catalogue, and it earns its place: without a
+                // domain that actually resolves, the assertion on the report partial's per-message
+                // domain cannot discriminate — an unknown key comes back unchanged whichever domain
+                // is used, so hard-coding `dataflow` passed too.
+                'paths' => ['%kernel.project_dir%/Tests/Fixtures/translations'],
+            ],
         ]);
 
         $this->registerAclStandIn($container);
