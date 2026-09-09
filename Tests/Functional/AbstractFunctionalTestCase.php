@@ -18,6 +18,9 @@ abstract class AbstractFunctionalTestCase extends TestCase
      */
     private mixed $handlerBeforeBoot = null;
 
+    /** Computed once per process; see {@see self::sourceFingerprint()}. */
+    private static ?int $sourceFingerprint = null;
+
     #[\Override]
     protected function setUp(): void
     {
@@ -44,6 +47,13 @@ abstract class AbstractFunctionalTestCase extends TestCase
      * container — a stale one silently invalidates the assertions, and it is the single most
      * confusing failure mode of a bundle test suite.
      *
+     * ⚠️ **And the key includes a fingerprint of the bundle's own source**, which it did not at
+     * first. Keyed on the scenario alone, editing `services.yaml` and re-running gave the container
+     * compiled from the PREVIOUS version: the kernel runs with `debug: false`, so it never checks
+     * whether its cache is fresh. That produced a green run for a defect that had just been
+     * introduced — and then a red one, minutes later, for code that had not changed. Exactly the
+     * failure mode the paragraph above warns about, in the harness that warns about it.
+     *
      * @param array<string, mixed> $bundleConfig
      */
     final protected function boot(
@@ -54,6 +64,7 @@ abstract class AbstractFunctionalTestCase extends TestCase
         $uniqueId = substr(md5(serialize([
             $bundleConfig,
             $withOrm,
+            self::sourceFingerprint(),
         ])), 0, 12);
 
         // Arguments nommés : une brique absente retire son paramètre du kernel, et un appel
@@ -95,6 +106,53 @@ abstract class AbstractFunctionalTestCase extends TestCase
 
             restore_exception_handler();
         }
+    }
+
+    /**
+     * The newest modification time across the bundle's own source, computed once per process.
+     *
+     * Everything that can change how the container compiles is in here: `Resources/config`, the
+     * extension and its passes, the bundle class, and every service class — an argument renamed in
+     * a constructor changes the wiring as surely as a line of YAML does. Tests are excluded: they
+     * cannot affect compilation, and including them would invalidate the cache on every edit.
+     *
+     * A fingerprint rather than the cache-freshness machinery, because `debug: true` is not
+     * available here — it installs an error handler and never removes it, which is global state
+     * PHPUnit is right to report.
+     */
+    private static function sourceFingerprint(): int
+    {
+        if (null !== self::$sourceFingerprint) {
+            return self::$sourceFingerprint;
+        }
+
+        $root = \dirname(__DIR__, 2);
+        $newest = 0;
+
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveCallbackFilterIterator(
+                new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS),
+                static function (\SplFileInfo $file): bool {
+                    $name = $file->getFilename();
+
+                    if ($file->isDir()) {
+                        return !\in_array($name, ['vendor', 'Tests', 'var', '.git', '.github'], true);
+                    }
+
+                    return \in_array($file->getExtension(), ['php', 'yaml', 'yml', 'xml'], true);
+                },
+            ),
+        );
+
+        foreach ($files as $file) {
+            if (!$file instanceof \SplFileInfo) {
+                continue;
+            }
+
+            $newest = max($newest, (int) $file->getMTime());
+        }
+
+        return self::$sourceFingerprint = $newest;
     }
 
     /**

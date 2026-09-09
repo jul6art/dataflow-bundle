@@ -1,14 +1,97 @@
 services:
     # Services whose dependencies are all guaranteed go here, wired explicitly.
     #
-    # Anything conditional — a brick that needs an optional package, or a service the
-    # application may not have — is registered from the extension or removed by a compiler
-    # pass instead. Cf. DependencyInjection/DataflowExtension.php.
+    # ⚠️ No autowiring and no autoconfiguration. A bundle that autowires depends on the
+    # application's container behaving like the application's own code, and a consumer that turns
+    # `autoconfigure` off for `vendor/` — which it should — would silently lose whatever a tag was
+    # doing. Explicit is also the only way `debug:container` tells the truth.
+    _defaults:
+        autowire: false
+        autoconfigure: false
+        public: false
 
-    # ⚠️ Nothing is registered yet, and that is a known gap rather than an omission: the report and
-    # import runners both need `Doctrine\ORM\EntityManagerInterface`, which only exists in an
-    # application that installs doctrine-bundle — a package this bundle deliberately does not
-    # require. A service that needs another SERVICE to exist is decided in a compiler pass, not in
-    # the extension, so the wiring lands with the ports (lot 1.4) alongside the pass that removes it
-    # when Doctrine is absent. Until then a consumer instantiates the runners itself, which is what
-    # the README shows.
+    # ---------------------------------------------------------------- no dependencies at all
+    Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter: ~
+    Jul6Art\DataflowBundle\Import\HeaderInspector: ~
+    Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory: ~
+
+    # ---------------------------------------------------------------- writers and readers
+    #
+    # Registered on the DEFAULT dialect — RFC 4180, no byte-order mark. A screen destined to be
+    # double-clicked in France builds `new CsvWriter(CsvDialect::excelFr())` at its call site, where
+    # the choice of recipient is visible; a container-wide default would settle that question for
+    # every export at once, which is the mistake the dialect object exists to undo.
+    Jul6Art\DataflowBundle\Io\Writer\CsvWriter: ~
+    Jul6Art\DataflowBundle\Io\Writer\XlsxWriter: ~
+    Jul6Art\DataflowBundle\Io\Writer\JsonWriter: ~
+    Jul6Art\DataflowBundle\Io\Reader\CsvReader: ~
+
+    # ---------------------------------------------------------------- ports, with their defaults
+    #
+    # An application replaces one by binding the INTERFACE to its own service; the concrete default
+    # stays registered and unused, which costs nothing and keeps `debug:container` readable.
+    Jul6Art\DataflowBundle\Port\ConfiguredLimitsProvider: ~
+    Jul6Art\DataflowBundle\Port\LimitsProviderInterface: '@Jul6Art\DataflowBundle\Port\ConfiguredLimitsProvider'
+
+    Jul6Art\DataflowBundle\Port\NullExportAuditor: ~
+    Jul6Art\DataflowBundle\Port\ExportAuditorInterface: '@Jul6Art\DataflowBundle\Port\NullExportAuditor'
+
+    # ⚠️ ReportDefinitionStoreInterface is deliberately NOT aliased. There is no sensible default:
+    # a saved report is a row with an owner, a tenant and a lifecycle, and inventing an entity for
+    # it in a bundle would force one tenancy model on three applications. With nothing bound,
+    # reports are ephemeral — a complete feature, and where the greenfield consumers start.
+
+    # ---------------------------------------------------------------- report engine
+    # Order in the chain is irrelevant: the three `supports()` are disjoint by PHP type. Said out
+    # loud because a chain whose order mattered and was not stated is a defect waiting for someone
+    # to sort this list alphabetically.
+    Jul6Art\DataflowBundle\Report\Transformer\DateTimeValueTransformer:
+        tags: ['dataflow.value_transformer']
+
+    Jul6Art\DataflowBundle\Report\Transformer\EnumValueTransformer:
+        tags: ['dataflow.value_transformer']
+
+    Jul6Art\DataflowBundle\Report\Transformer\BoolValueTransformer:
+        arguments:
+            $translator: '@translator'
+            $translationDomain: '%dataflow.translation_domain%'
+        tags: ['dataflow.value_transformer']
+
+    Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain:
+        arguments:
+            $transformers: !tagged_iterator dataflow.value_transformer
+
+    Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog:
+        arguments:
+            $permissions: '@Jul6Art\AclBundle\Security\PermissionDecisionService'
+            # ⚠️ `@?` and not `@`: two of the three target applications bind no feature checker at
+            # all, and a hard reference would make their container unresolvable at COMPILE time —
+            # a boot failure, not a degraded feature. OptionalContractPass is the second belt, for
+            # a consumer that re-registers this service with autowiring.
+            $features: '@?Jul6Art\AclBundle\Contract\FeatureCheckerInterface'
+            $providers: !tagged_iterator dataflow.reportable_entity_provider
+
+    # ---------------------------------------------------------------- needs Doctrine's ORM
+    #
+    # ⚠️ These three are REMOVED by OptionalContractPass when the application has no
+    # `EntityManagerInterface`. This bundle requires `doctrine/orm`, the library, and deliberately
+    # not `doctrine/doctrine-bundle`, the integration — so the entity manager SERVICE may genuinely
+    # be absent, and a bundle that assumed it would refuse to boot in an application that only
+    # exports.
+    Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog:
+        arguments:
+            $entityManager: '@Doctrine\ORM\EntityManagerInterface'
+            $entities: '@Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog'
+            $policy: '@?Jul6Art\DataflowBundle\Report\Catalog\FieldPolicyInterface'
+
+    Jul6Art\DataflowBundle\Report\ReportRunner:
+        arguments:
+            $entityManager: '@Doctrine\ORM\EntityManagerInterface'
+            $entities: '@Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog'
+            $fields: '@Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog'
+            $transformers: '@Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain'
+
+    Jul6Art\DataflowBundle\Import\ImportRunner:
+        arguments:
+            $entityManager: '@Doctrine\ORM\EntityManagerInterface'
+            $validator: '@validator'

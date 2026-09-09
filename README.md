@@ -47,11 +47,82 @@ Configuration
 ```yaml
 # config/packages/dataflow.yaml
 dataflow:
-    # Leaves the bundle installed and inert when false.
+    # Leaves the bundle installed and inert when false — no services at all, not merely no feature.
     enabled: true
+
+    # The catalogue the bundle's own keys are looked up in. Never `messages`.
+    translation_domain: dataflow
+
+    # Applied when no LimitsProviderInterface is bound. These are the defaults.
+    limits:
+        report_rows: 1000            # rows a run returns when the caller asks for no limit
+        export_rows: 50000           # rows one export may contain
+        exports_per_hour: 30         # exports one actor may run per hour
+        export_rows_per_hour: 10000  # row budget one actor may export per hour
+        import_rows: 10000           # rows one imported file may contain
+        imports_per_hour: 5          # imports one actor may run per hour
+        field_max_depth: 2           # toOne relations the field catalogue walks; 0 = root only
 ```
 
-`dataflow.enabled` is also exposed as a container parameter.
+⚠️ **Every ceiling is also a container parameter** — `%dataflow.limits.export_rows_per_hour%` and
+its six siblings. That is not a convenience: the reference application wrote its row budget
+`10000` twice, once as a `rate_limiter.yaml` bucket size and once in the PHP that subtracted from
+it, with nothing linking them. Changing the YAML made the arithmetic wrong in silence. Read the
+parameter in both places and there is one number:
+
+```yaml
+# config/packages/rate_limiter.yaml
+framework:
+    rate_limiter:
+        report_export_per_user:
+            policy: sliding_window
+            limit: '%dataflow.limits.export_rows_per_hour%'
+            interval: '1 hour'
+```
+
+Ports
+-----
+
+Three seams where the bundle stops and the application starts. Two have a working default, so a
+consumer that binds nothing still has a usable bundle; the third has none, on purpose.
+
+| Port | Default | Bind your own when |
+| --- | --- | --- |
+| `LimitsProviderInterface` | `ConfiguredLimitsProvider` — the configuration above, the same for everyone | ceilings vary by tenant, plan or quota |
+| `ExportAuditorInterface` | `NullExportAuditor` — exports are not journalled | you have `audit-bundle`, or any audit trail |
+| `ReportDefinitionStoreInterface` | **none** — saved reports are ephemeral | reports must survive the session |
+
+```yaml
+# config/services.yaml
+services:
+    Jul6Art\DataflowBundle\Port\ReportDefinitionStoreInterface: '@App\Report\DoctrineReportStore'
+```
+
+⚠️ **The store has no default because there cannot be one.** A saved report is a row with an owner,
+a tenant, a visibility and a lifecycle; shipping an entity for it would force one tenancy model on
+every consumer. *A bundle interprets, a project persists.*
+
+⚠️ **A store keeps the raw payload, never a `ReportSpec`.** A spec is valid against today's
+catalogue; a saved report has to survive tomorrow's. The payload is re-interpreted on every load by
+the same `ReportSpecInterpreter` a fresh screen uses — an unknown column is dropped, a missing
+entity refused. That is a security property as much as a robustness one: a definition saved when its
+author could read `customer.email` must not still expose it after the permission is revoked.
+
+⚠️ **An `ExportAuditorInterface` must not throw.** An audit trail that can fail the thing it
+observes turns a full log table into an outage of the export feature.
+
+⚠️ **`ExportRecord::$rows` is known only AFTER the response has streamed** — that is what streaming
+means. An auditor called before the first byte records every export as zero rows, and the row count
+is the single most useful field in an export trail: it is what distinguishes a normal export from an
+exfiltration.
+
+### What needs Doctrine, and what does not
+
+`ReportRunner`, `FieldCatalog` and `ImportRunner` need an `EntityManagerInterface`. This bundle
+requires `doctrine/orm` — the library — and deliberately **not** `doctrine/doctrine-bundle` — the
+integration, which is what registers that service. In an application without it those three
+services are removed by a compiler pass rather than left dangling, so the `Io/` half still works:
+writing a CSV from an array needs no ORM.
 
 Usage
 -----

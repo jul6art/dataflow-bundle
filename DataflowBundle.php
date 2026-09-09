@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Jul6Art\DataflowBundle;
 
 use Jul6Art\DataflowBundle\DependencyInjection\Compiler\OptionalContractPass;
+use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntityProviderInterface;
+use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
@@ -38,5 +40,17 @@ class DataflowBundle extends Bundle
         // container is unresolvable at COMPILE time, which is a boot failure and not a degraded
         // feature. Two bundles of this ecosystem shipped that defect before, four months apart.
         $container->addCompilerPass(new OptionalContractPass());
+
+        // ⚠️ Autoconfiguration is declared here and NOT relied on inside the bundle: it applies to
+        // the APPLICATION's services, which do have `autoconfigure: true`, so a consumer's provider
+        // or transformer is picked up by writing the class and nothing else. The bundle's own
+        // services are tagged explicitly in `services.yaml`, because a consumer that turns
+        // autoconfiguration off for `vendor/` — which it should — would otherwise lose them
+        // silently.
+        $container->registerForAutoconfiguration(ReportableEntityProviderInterface::class)
+            ->addTag('dataflow.reportable_entity_provider');
+
+        $container->registerForAutoconfiguration(ValueTransformerInterface::class)
+            ->addTag('dataflow.value_transformer');
     }
 }

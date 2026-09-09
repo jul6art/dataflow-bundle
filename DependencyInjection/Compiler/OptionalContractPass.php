@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Jul6Art\DataflowBundle\DependencyInjection\Compiler;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Jul6Art\AclBundle\Contract\FeatureCheckerInterface;
+use Jul6Art\DataflowBundle\Import\ImportRunner;
 use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
+use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
+use Jul6Art\DataflowBundle\Report\ReportRunner;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
- * Nulls the optional contracts the application did not implement.
+ * Reconciles the bundle's service graph with what the application actually has.
+ *
+ * Two jobs, one pass, because both answer the same question — "does this service exist here?" — and
+ * two passes with identical reasoning is worse than one with two paragraphs.
  *
  * ## Why a compiler pass and not a check in the extension
  *
@@ -42,11 +49,46 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * ⚠️ The permission half is **never** optional. A report engine without a per-entity authorisation
  * gate is a cross-tenant exfiltration tool, so `PermissionDecisionService` stays a hard argument —
  * it is registered unconditionally by `acl-bundle`, which every consumer installs.
+ *
+ * ⚠️ Since the wiring became explicit, `services.yaml` already asks for the checker with `@?`, so
+ * this half is now the second belt rather than the only one. It stays because a consumer that
+ * re-registers `EntityCatalog` with autowiring — to add its own decoration, say — loses the `@?`
+ * and gets the compile-time failure back.
+ *
+ * ## And the Doctrine-dependent services, removed rather than left broken
+ *
+ * ⚠️ **This bundle requires `doctrine/orm`, the library, and deliberately not
+ * `doctrine/doctrine-bundle`, the integration.** So `EntityManagerInterface` may genuinely have no
+ * service behind it — in an application that only writes exports from arrays, which is a real and
+ * supported use of the `Io/` half. Three services need it, and a bundle that assumed it would
+ * refuse to boot there instead of simply offering less.
+ *
+ * ⚠️ **They are removed in dependency order, deepest first.** Removing `FieldCatalog` while
+ * `ReportRunner` still references it leaves a dangling reference, and the message Symfony then
+ * produces names the runner rather than the missing entity manager — which sends whoever reads it
+ * looking in the wrong place.
  */
 final class OptionalContractPass implements CompilerPassInterface
 {
+    /**
+     * Deepest dependency first, so a removal never leaves a reference behind it.
+     *
+     * @var list<class-string>
+     */
+    private const array NEEDS_ENTITY_MANAGER = [
+        ReportRunner::class,
+        ImportRunner::class,
+        FieldCatalog::class,
+    ];
+
     #[\Override]
     public function process(ContainerBuilder $container): void
+    {
+        $this->nullTheAbsentFeatureChecker($container);
+        $this->removeWhatNeedsAnAbsentEntityManager($container);
+    }
+
+    private function nullTheAbsentFeatureChecker(ContainerBuilder $container): void
     {
         if (self::hasImplementation($container, FeatureCheckerInterface::class)) {
             return;
@@ -54,6 +96,17 @@ final class OptionalContractPass implements CompilerPassInterface
 
         if ($container->hasDefinition(EntityCatalog::class)) {
             $container->getDefinition(EntityCatalog::class)->setArgument('$features', null);
+        }
+    }
+
+    private function removeWhatNeedsAnAbsentEntityManager(ContainerBuilder $container): void
+    {
+        if (self::hasImplementation($container, EntityManagerInterface::class)) {
+            return;
+        }
+
+        foreach (self::NEEDS_ENTITY_MANAGER as $id) {
+            $container->removeDefinition($id);
         }
     }
 

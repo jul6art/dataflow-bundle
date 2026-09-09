@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Jul6Art\DataflowBundle\Tests\Functional;
 
+use Jul6Art\DataflowBundle\Import\HeaderInspector;
+use Jul6Art\DataflowBundle\Port\LimitsProviderInterface;
+use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
 use PHPUnit\Framework\Attributes\CoversNothing;
 
 /**
@@ -30,5 +33,22 @@ final class ContainerTest extends AbstractFunctionalTestCase
     public function testItCanBeDisabled(): void
     {
         self::assertFalse($this->boot('test', ['enabled' => false])->hasParameter('dataflow.enabled'));
+    }
+
+    /**
+     * ⚠️ And "inert" means NO definitions, not merely no parameter. Loading the services and then
+     * returning early left definitions referencing `%dataflow.translation_domain%`, which the early
+     * return never sets. That happened to compile — every one of those services is private and
+     * unreferenced, so the container removed them before resolving parameters — and would have
+     * become a boot failure for the first application to inject one.
+     */
+    public function testDisabledMeansNoServicesAtAll(): void
+    {
+        $container = $this->boot('test', ['enabled' => false]);
+
+        self::assertFalse($container->has(ReportSpecInterpreter::class));
+        self::assertFalse($container->has(HeaderInspector::class));
+        self::assertFalse($container->has(LimitsProviderInterface::class));
+        self::assertFalse($container->hasParameter('dataflow.limits.export_rows'));
     }
 }

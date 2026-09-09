@@ -5,7 +5,20 @@ declare(strict_types=1);
 namespace Jul6Art\DataflowBundle\Tests\Fixtures;
 
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
+use Jul6Art\AclBundle\Security\PermissionDecisionService;
 use Jul6Art\DataflowBundle\DataflowBundle;
+use Jul6Art\DataflowBundle\Import\HeaderInspector;
+use Jul6Art\DataflowBundle\Import\ImportRunner;
+use Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory;
+use Jul6Art\DataflowBundle\Io\Reader\CsvReader;
+use Jul6Art\DataflowBundle\Io\Writer\CsvWriter;
+use Jul6Art\DataflowBundle\Port\ExportAuditorInterface;
+use Jul6Art\DataflowBundle\Port\LimitsProviderInterface;
+use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
+use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
+use Jul6Art\DataflowBundle\Report\ReportRunner;
+use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
+use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -110,7 +123,23 @@ final class TestKernel extends Kernel
                     'request_stack',
                     'security.token_storage',
                     'validator',
-                    // Add the bundle's own services here as the tests need them.
+                    'translator',
+                    // The bundle's own services. Exposing them is what makes "installed and
+                    // inert" observable: private definitions are removed when nothing references
+                    // them, so `has()` on an unexposed one answers false whether the bundle
+                    // registered it or not.
+                    ReportSpecInterpreter::class,
+                    HeaderInspector::class,
+                    TabularResponseFactory::class,
+                    CsvReader::class,
+                    CsvWriter::class,
+                    EntityCatalog::class,
+                    FieldCatalog::class,
+                    ReportRunner::class,
+                    ImportRunner::class,
+                    ValueTransformerChain::class,
+                    LimitsProviderInterface::class,
+                    ExportAuditorInterface::class,
                 ];
 
                 foreach ($container->getDefinitions() as $id => $definition) {
@@ -144,13 +173,36 @@ final class TestKernel extends Kernel
             // container has to carry a validator — attributes on, since that is how a consumer's
             // entities declare their constraints.
             'validation' => ['enabled' => true, 'enable_attributes' => true],
+            // `BoolValueTransformer` renders two catalogue keys, so the translator is a hard
+            // dependency of the bundle rather than an optional one — and a container without it
+            // would not compile.
+            'translator' => ['default_path' => '%kernel.project_dir%/Resources/translations'],
         ]);
+
+        $this->registerAclStandIn($container);
 
         if ($this->withOrm) {
             $this->configureDoctrine($container);
         }
 
         $container->loadFromExtension('dataflow', $this->bundleConfig);
+    }
+
+    /**
+     * Registers the one `acl-bundle` service this bundle references, without booting `acl-bundle`.
+     *
+     * ⚠️ A stand-in and not the real bundle, deliberately: `acl-bundle` requires
+     * `symfony/security-bundle`, which needs a firewall configuration to boot, and none of that
+     * proves anything about THIS bundle's wiring. What has to be right is the service **id** — a
+     * typo there is exactly the class of defect a container test exists to catch — so the id and
+     * the class are the real ones, and only the collaborators are left out.
+     */
+    private function registerAclStandIn(ContainerBuilder $container): void
+    {
+        $container
+            ->register(PermissionDecisionService::class, PermissionDecisionService::class)
+            ->setArguments(['ROLE_ORGANIZATION_ADMIN', null, true])
+            ->setPublic(true);
     }
 
     /**
