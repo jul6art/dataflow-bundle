@@ -37,17 +37,17 @@ final class StylesheetPaletteTest extends TestCase
 
     public function testEveryColourUtilityNamesAPaletteTailwindShipsWith(): void
     {
-        $css = \file_get_contents(\dirname(__DIR__, 2).'/assets/styles/dataflow.css');
+        $css = file_get_contents(\dirname(__DIR__, 2).'/assets/styles/dataflow.css');
         self::assertIsString($css);
 
         // `@apply` lines only: a comment mentioning a palette name is prose, not a class.
-        \preg_match_all('/@apply ([^;]+);/', $css, $blocks);
+        preg_match_all('/@apply ([^;]+);/', $css, $blocks);
 
         $foreign = [];
 
         foreach ($blocks[1] as $block) {
-            foreach (\preg_split('/\s+/', \trim($block)) ?: [] as $utility) {
-                $matched = \preg_match('/(?:^|:)(?:bg|text|border|ring|divide|from|to|via|outline|decoration|accent|caret|shadow|fill|stroke)-([a-z]+)-\d/', $utility, $parts);
+            foreach (preg_split('/\s+/', trim($block)) ?: [] as $utility) {
+                $matched = preg_match('/(?:^|:)(?:bg|text|border|ring|divide|from|to|via|outline|decoration|accent|caret|shadow|fill|stroke)-([a-z]+)-\d/', $utility, $parts);
 
                 if (1 === $matched && !\in_array($parts[1], self::TAILWIND_PALETTES, true)) {
                     $foreign[] = $utility;
@@ -55,9 +55,9 @@ final class StylesheetPaletteTest extends TestCase
             }
         }
 
-        self::assertSame([], \array_values(\array_unique($foreign)), \sprintf(
+        self::assertSame([], array_values(array_unique($foreign)), \sprintf(
             "These utilities name a palette Tailwind does not ship, so a consumer's build fails on a\nfile it did not write:\n  - %s",
-            \implode("\n  - ", \array_unique($foreign)),
+            implode("\n  - ", array_unique($foreign)),
         ));
     }
 }
