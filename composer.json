@@ -13,7 +13,7 @@
     ],
     "require": {
         "php": "^8.5",
-        "doctrine/orm": "^3.3",
+        "doctrine/orm": "^3.5",
         "jul6art/acl-bundle": "^1.1",
         "openspout/openspout": "^5.7",
         "symfony/config": "^7.4 || ^8.0",
