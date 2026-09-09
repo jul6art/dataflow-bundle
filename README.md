@@ -101,6 +101,46 @@ loses a column boundary.
 Anything other than the three presets is a deliberate exception, and constructing a `CsvDialect`
 by hand reads as one at the call site.
 
+### The other two writers
+
+`XlsxWriter` and `JsonWriter` implement the same contract, so a caller swaps one for another by
+changing a single constructor call — that is what the `code()` / `contentType()` /
+`fileExtension()` triplet is for.
+
+⚠️ **A workbook cannot be streamed to the client.** A `.xlsx` is a ZIP archive whose central
+directory is written last, so no prefix of the file is a valid document: `XlsxWriter` buffers to a
+temporary file as rows arrive — the row source is still consumed lazily — then emits the finished
+file **in 64 KiB chunks**. Emitting it as one string, which the version this replaces did, puts the
+whole workbook back into a single PHP string and undoes the memory discipline of everything above.
+
+⚠️ **`JsonWriter` deliberately does NOT apply the formula guard.** No spreadsheet opens its output,
+so prefixing a value with an apostrophe would corrupt the payload of the only consumer there is. It
+does use `JSON_THROW_ON_ERROR`: with `json_encode`'s default, a malformed UTF-8 byte out of a legacy
+column returns `false`, emits the empty string, and produces a syntactically valid document
+silently missing a row — the worst available outcome.
+
+### Serving it as a download
+
+```php
+use Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory;
+
+return $this->responses->stream(
+    $writer,
+    ['number', 'customer', 'total'],
+    $rows,
+    TabularResponseFactory::basename(['invoices', $organization->getSlug()]),
+);
+```
+
+`basename()` builds the conventional `<subject>_<tenant>_<date>`, drops empty parts rather than
+leaving a double separator, and sanitises each one.
+
+⚠️ **The filename is sanitised as a security control, not for tidiness.** A tenant slug or a report
+name reaches the `Content-Disposition` header from the database; a newline in it splits the HTTP
+response and everything after the split is attacker-controlled. The five endpoints this factory
+replaces did not agree on the matter: three sanitised, one hard-coded its filename, one did
+neither.
+
 ### Formula injection is handled for you
 
 Every cell of every row **and of the header** goes through `Io\Guard\FormulaInjectionGuard` before

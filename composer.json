@@ -13,8 +13,10 @@
     ],
     "require": {
         "php": "^8.5",
+        "openspout/openspout": "^5.7",
         "symfony/config": "^7.4 || ^8.0",
         "symfony/dependency-injection": "^7.4 || ^8.0",
+        "symfony/http-foundation": "^7.4 || ^8.0",
         "symfony/http-kernel": "^7.4 || ^8.0",
         "symfony/yaml": "^7.4 || ^8.0"
     },
@@ -73,6 +75,10 @@
             "@rector-check",
             "@phpstan",
             "@test"
-        ]
+        ],
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install %PUBLIC_DIR%": "symfony-cmd"
+        }
     }
 }
