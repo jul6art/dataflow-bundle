@@ -62,6 +62,42 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ **A partial's leading comment must not reach the page.** Twig comments do not nest, so an
+     * inner `{# … #}` in a usage example closes the outer one at that point and every line after it
+     * becomes literal output — thirteen lines of prose and five `path()` calls printed above the
+     * stepper. `lint:twig` passes: the file is valid Twig, just not the Twig anybody meant. Only
+     * opening the screen showed it, so this asserts the shape no eye has to check: the render starts
+     * with the element, and nothing before it.
+     */
+    public function testNoPartialLeaksItsOwnDocumentation(): void
+    {
+        $rendered = [
+            'report/_builder' => $this->render('@Dataflow/report/_builder.html.twig', [
+                'entities' => [],
+                'fields_url' => '/f',
+                'run_url' => '/r',
+                'export_url' => '/e',
+                'save_url' => '/s',
+                'load_url' => '/l/{id}',
+                'can_share' => false,
+            ]),
+            'import/_mapper' => $this->render('@Dataflow/import/_mapper.html.twig', [
+                'inspection' => new HeaderInspection(['Email'], [0 => 'email']),
+                'fields' => ['email'],
+            ]),
+            'import/_report' => $this->render('@Dataflow/import/_report.html.twig', [
+                'report' => new ImportReport(),
+            ]),
+        ];
+
+        foreach ($rendered as $name => $html) {
+            self::assertStringStartsWith('<', ltrim($html), $name.' leaks something before its first element.');
+            self::assertStringNotContainsString('path(', $html, $name.' printed a Twig call as text.');
+            self::assertStringNotContainsString('⚠️', $html, $name.' printed one of its own warnings.');
+        }
+    }
+
+    /**
      * ⚠️ The whole point of this file. A key the catalogue lacks renders as itself.
      */
     public function testNoPartialLeaksARawTranslationKey(): void

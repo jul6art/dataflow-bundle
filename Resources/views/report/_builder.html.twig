@@ -7,15 +7,25 @@
 
     Include it from your own page:
 
-        {{ include('@Dataflow/report/_builder.html.twig', {
-            entities:   report_entities,                                  {# {fqcn: {label: '…'}} #}
+        include('@Dataflow/report/_builder.html.twig', {
+            entities:   report_entities,
             fields_url: path('app_report_builder_fields'),
             run_url:    path('app_report_builder_run'),
             export_url: path('app_report_builder_export'),
             save_url:   path('app_report_builder_save'),
             load_url:   path('app_report_builder_load', {id: '__ID__'})|replace({__ID__: '{id}'}),
             can_share:  is_granted('report:builder:share'),
-        }) }}
+        })
+
+    `entities` is a map of FQCN to a hash carrying a `label`.
+
+    ⚠️ **Twig comments do not nest**, which is why the line above is prose and why this block
+    contains no comment delimiter of its own. Written the obvious way — a nested comment annotating
+    the `entities` line — this block closed at the INNER terminator, and everything after it
+    (thirteen lines of prose plus five path calls) was printed onto the page, above the stepper.
+    `lint:twig` passes either way: the file is valid Twig, just not the Twig anybody meant. Only
+    opening the screen showed it, and I made the mistake twice — the second time inside the warning
+    about the first.
 
     ⚠️ `load_url` must contain the literal `{id}`. Generating it with a placeholder and swapping it
     back is the readable way to get one out of a router that insists on a real value — the version
