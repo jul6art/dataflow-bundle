@@ -267,6 +267,27 @@ copies of a 50 000-row result set before emitting a byte.
 `$scope` closure receiving the query builder and the root alias. Inventing an `organization`
 column here would fit one consumer and silently return everything for the others.
 
+### The fields endpoint
+
+The screen asks your application for the columns it may offer, and the answer must be serialised
+through `ReportField::toArray()`:
+
+```php
+return new JsonResponse([
+    'fields' => array_map(
+        static fn (ReportField $field): array => $field->toArray(),
+        $fields->listFor($rootFqcn, $user, $limits->fieldMaxDepth)
+    ),
+]);
+```
+
+⚠️ **Do not hand-roll that array.** In v1.0.0 the catalogue produced `traversed` and the shipped
+controller read `relation` — a name inherited from the application it was extracted from — so the
+field sort compared `undefined` to `undefined`, the branch never fired, and every column behind a
+relation sorted in among the root's own. Nothing failed: a missing property is not an error in
+JavaScript, and no test crossed the boundary. `toArray()` and `ReportFieldWireShapeTest` are what
+close it.
+
 ### Declaring what may be reported
 
 Two gates, and they answer different questions.

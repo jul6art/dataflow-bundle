@@ -332,12 +332,19 @@ export default class extends Controller {
         }
     }
 
-    /** Identifier first, then plain columns, then the ones behind a relation. */
+    /**
+     * Identifier first, then plain columns, then the ones behind a relation.
+     *
+     * ⚠️ `traversed`, which is what `ReportField::toArray()` produces. This read `relation` in
+     * v1.0.0 — a name inherited from the application the controller came from — so the comparison
+     * was `undefined !== undefined`, always false, and every relation column sorted in among the
+     * plain ones. A missing property is not an error in JavaScript, so nothing said a word.
+     */
     _sortFields(fields) {
         return [...fields].sort((a, b) => {
             if ('id' === a.path) return -1;
             if ('id' === b.path) return 1;
-            if (a.relation !== b.relation) return a.relation ? 1 : -1;
+            if (a.traversed !== b.traversed) return a.traversed ? 1 : -1;
 
             return a.path.localeCompare(b.path);
         });

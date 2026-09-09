@@ -31,4 +31,29 @@ final readonly class ReportField
         public bool $traversed = false,
     ) {
     }
+
+    /**
+     * The wire shape the report builder's JavaScript reads.
+     *
+     * ⚠️ **This method exists because the two halves of this bundle disagreed.** The catalogue
+     * produced `traversed` and the shipped controller read `relation` — a name inherited from the
+     * application the controller was extracted from — so its field sort silently compared
+     * `undefined` to `undefined` and every relation column landed among the plain ones. Nothing
+     * caught it: no test crossed the boundary, and a missing JavaScript property is not an error.
+     *
+     * ⚠️ So a consumer's `fields` endpoint must serialise through HERE rather than hand-rolling the
+     * array. Hand-rolling is what let the names drift in the first place, and the endpoint is
+     * project code the bundle's tests cannot see.
+     *
+     * @return array{path: string, label: string, type: string, traversed: bool}
+     */
+    public function toArray(): array
+    {
+        return [
+            'path' => $this->path,
+            'label' => $this->label,
+            'type' => $this->type,
+            'traversed' => $this->traversed,
+        ];
+    }
 }
