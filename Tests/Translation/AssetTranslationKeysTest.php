@@ -76,7 +76,9 @@ final class AssetTranslationKeysTest extends TestCase
     {
         $catalogue = self::catalogue();
 
-        foreach (new DeclaredTranslationKeys()->keys() as $key) {
+        $declared = [...new DeclaredTranslationKeys()->keys(), ...new DeclaredTranslationKeys()->templateKeys()];
+
+        foreach ($declared as $key) {
             self::assertContains($key, $catalogue);
         }
     }

@@ -599,11 +599,21 @@ through a variable and so are invisible to a scanner — the twelve filter opera
 four step labels — and `DeclaredTranslationKeys` names them for your guard:
 
 ```php
-protected static function declaredKeys(): array
+protected static function declaredKeys(): array          // the BROWSER's catalogue
 {
     return static::getContainer()->get(DeclaredTranslationKeys::class)->keys();
 }
 ```
+
+⚠️ **`keys()` is what the browser reads; `templateKeys()` is what the server renders.** They are
+different catalogues — this ecosystem exposes exactly one domain to JavaScript, so a key the browser
+needs is *moved* into it — and one list conflated them until v1.3.0: the first consumer's JavaScript
+guard reported the four step labels as missing from its browser catalogue, which they legitimately
+are. They come from a Twig partial.
+
+⚠️ **And point your JavaScript guard at this bundle's `assets/` too.** The controller lives in
+`vendor/`, so a guard that scans only the project's own `assets/` sees forty `dataflow.*` keys
+translated by the project and read by nothing — and reports them dead.
 
 ⚠️ **A ternary goes outside the lookup, never inside it.** A condition in the argument position
 hides both keys from a scanner, so a catalogue clean-up deletes entries the screen renders. The

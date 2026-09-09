@@ -29,28 +29,31 @@ final class DeclaredTranslationKeysTest extends TestCase
     }
 
     /**
-     * ⚠️ And the four step labels, read through `step.label|trans` in the builder partial — a
-     * property access, so a Twig scanner sees no key either.
+     * ⚠️ The four step labels, read through `step.label|trans` in the builder partial — a property
+     * access, so a Twig scanner sees no key either. In `templateKeys()` and NOT in `keys()`: they
+     * are rendered server-side, in this bundle's own domain, and a JavaScript guard handed them
+     * reports them missing from the browser's catalogue — correctly, and confusingly. That is
+     * exactly what the first consumer's guard did.
      */
-    public function testTheStepLabelsReadThroughAVariableAreDeclaredToo(): void
+    public function testTheStepLabelsAreDeclaredForTheServerAndNotForTheBrowser(): void
     {
-        $declared = new DeclaredTranslationKeys()->keys();
+        $template = new DeclaredTranslationKeys()->templateKeys();
+        $browser = new DeclaredTranslationKeys()->keys();
 
         foreach (['entity', 'columns', 'filters', 'export'] as $step) {
-            self::assertContains('dataflow.builder.step.'.$step, $declared);
+            self::assertContains('dataflow.builder.step.'.$step, $template);
+            self::assertNotContains('dataflow.builder.step.'.$step, $browser);
         }
     }
 
     /**
-     * The whole list, so an addition or a removal shows up in a diff rather than in nobody's
-     * notice. Twelve operators plus four step labels.
+     * The whole of each list, so an addition or a removal shows up in a diff rather than in
+     * nobody's notice.
      */
-    public function testItDeclaresNothingElse(): void
+    public function testEachListDeclaresNothingElse(): void
     {
-        self::assertCount(
-            \count(FilterOperator::cases()) + 4,
-            new DeclaredTranslationKeys()->keys(),
-        );
+        self::assertCount(\count(FilterOperator::cases()), new DeclaredTranslationKeys()->keys());
+        self::assertCount(4, new DeclaredTranslationKeys()->templateKeys());
     }
 
     public function testTheKeysAreSortedSoADiffOfThemIsReadable(): void
@@ -64,7 +67,11 @@ final class DeclaredTranslationKeysTest extends TestCase
 
     public function testEveryDeclaredKeyLivesUnderTheBundleNamespace(): void
     {
-        foreach (new DeclaredTranslationKeys()->keys() as $key) {
+        $declared = [...new DeclaredTranslationKeys()->keys(), ...new DeclaredTranslationKeys()->templateKeys()];
+
+        self::assertNotSame([], $declared);
+
+        foreach ($declared as $key) {
             self::assertStringStartsWith(DeclaredTranslationKeys::PREFIX, $key);
         }
     }

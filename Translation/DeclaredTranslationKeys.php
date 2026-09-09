@@ -9,14 +9,22 @@ use Jul6Art\DataflowBundle\Report\Spec\FilterOperator;
 /**
  * The keys this bundle's JavaScript reads without naming them where a scanner can see them.
  *
- * A consumer hands them to its own translation guard, so the guard knows they are alive:
+ * A consumer hands them to its own translation guards, so the guards know they are alive:
  *
  * ```php
- * protected static function declaredKeys(): array
+ * protected static function declaredKeys(): array          // the BROWSER's catalogue
  * {
  *     return static::getContainer()->get(DeclaredTranslationKeys::class)->keys();
  * }
  * ```
+ *
+ * ## Two audiences, two lists
+ *
+ * ⚠️ **`keys()` is what the BROWSER reads; `templateKeys()` is what the SERVER renders.** They live
+ * in different catalogues — this ecosystem exposes exactly one domain to JavaScript, so a key the
+ * browser needs is *moved* into it — and a single list conflated them: the first consumer's
+ * JavaScript guard reported the four step labels as missing from its browser catalogue, which they
+ * legitimately are. They are rendered by `step.label|trans` in a Twig partial, server-side.
  *
  * ## Why there is anything to declare at all
  *
@@ -60,12 +68,29 @@ final readonly class DeclaredTranslationKeys
      */
     public function keys(): array
     {
-        $keys = self::TEMPLATE_KEYS;
+        $keys = [];
 
         foreach (FilterOperator::cases() as $operator) {
             $keys[] = self::PREFIX.'filter.op.'.$operator->value;
         }
 
+        \sort($keys);
+
+        return $keys;
+    }
+
+    /**
+     * The keys a TWIG partial of this bundle reads through a variable, in the bundle's own domain.
+     *
+     * ⚠️ Separate from {@see self::keys()} because they are not in the same catalogue: these are
+     * rendered server-side, and a JavaScript guard asked to find them in the browser's domain
+     * reports them missing — correctly, and confusingly.
+     *
+     * @return list<string>
+     */
+    public function templateKeys(): array
+    {
+        $keys = self::TEMPLATE_KEYS;
         \sort($keys);
 
         return $keys;
