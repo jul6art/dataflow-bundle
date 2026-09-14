@@ -105,11 +105,11 @@ services:
 
     # ---------------------------------------------------------------- needs Doctrine's ORM
     #
-    # ⚠️ These three are REMOVED by OptionalContractPass when the application has no
-    # `EntityManagerInterface`. This bundle requires `doctrine/orm`, the library, and deliberately
-    # not `doctrine/doctrine-bundle`, the integration — so the entity manager SERVICE may genuinely
-    # be absent, and a bundle that assumed it would refuse to boot in an application that only
-    # exports.
+    # ⚠️ These three, plus ImportMessageHandler further below, are REMOVED by OptionalContractPass
+    # when the application has no `EntityManagerInterface`. This bundle requires `doctrine/orm`, the
+    # library, and deliberately not `doctrine/doctrine-bundle`, the integration — so the entity
+    # manager SERVICE may genuinely be absent, and a bundle that assumed it would refuse to boot in
+    # an application that only exports.
     Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog:
         arguments:
             $entityManager: '@Doctrine\ORM\EntityManagerInterface'
@@ -129,3 +129,24 @@ services:
         arguments:
             $entityManager: '@Doctrine\ORM\EntityManagerInterface'
             $validator: '@validator'
+
+    # ⚠️ Removed by AsyncImportPass when `symfony/messenger` is not configured — see that pass and
+    # `ImportMessageHandler`'s own docblock for why $mappers is `@?` (optional) rather than a hard
+    # reference: this service is autowired for every application with a message bus, not only the
+    # ones using async import, and a required argument would fail an unrelated boot.
+    Jul6Art\DataflowBundle\Import\Async\NullImportProgressStore: ~
+    Jul6Art\DataflowBundle\Import\Async\ImportProgressStoreInterface: '@Jul6Art\DataflowBundle\Import\Async\NullImportProgressStore'
+
+    # ⚠️ The `messenger.message_handler` tag is EXPLICIT, not left to `#[AsMessageHandler]`'s own
+    # attribute-driven autoconfiguration — this file's own `_defaults` turns autoconfigure OFF for
+    # every reason the top of this file gives, and Messenger's attribute discovery is exactly that:
+    # autoconfiguration. Without this line the handler exists, resolves, and is never once invoked —
+    # found by a wiring test that dispatched a real message instead of only asserting the service
+    # exists.
+    Jul6Art\DataflowBundle\Import\Async\ImportMessageHandler:
+        arguments:
+            $runner: '@Jul6Art\DataflowBundle\Import\ImportRunner'
+            $mappers: '@?Jul6Art\DataflowBundle\Import\Async\ImportMapperFactoryInterface'
+            $progress: '@Jul6Art\DataflowBundle\Import\Async\ImportProgressStoreInterface'
+            $readers: !tagged_iterator dataflow.tabular_reader
+        tags: ['messenger.message_handler']

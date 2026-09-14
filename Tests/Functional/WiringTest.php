@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Jul6Art\DataflowBundle\Tests\Functional;
 
+use Jul6Art\DataflowBundle\Import\Async\ImportMessage;
+use Jul6Art\DataflowBundle\Import\Async\ImportMessageHandler;
 use Jul6Art\DataflowBundle\Import\HeaderInspector;
 use Jul6Art\DataflowBundle\Import\ImportRunner;
 use Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory;
@@ -24,6 +26,8 @@ use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
 use Jul6Art\DataflowBundle\Tests\Fixtures\TaggedReaders;
 use Jul6Art\DataflowBundle\Tests\Fixtures\TaggedWriters;
 use PHPUnit\Framework\Attributes\CoversNothing;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Twig\Environment;
 
 /**
@@ -242,5 +246,68 @@ final class WiringTest extends AbstractFunctionalTestCase
     public function testTheEntityCatalogueBuildsWithoutAFeatureChecker(): void
     {
         self::assertInstanceOf(EntityCatalog::class, $this->boot()->get(EntityCatalog::class));
+    }
+
+    /**
+     * ⚠️ Lot 2.7: this bundle does not require `symfony/messenger` either, on the same principle as
+     * the absence of `doctrine-bundle` above. Without it {@see ImportMessageHandler} would dangle —
+     * nothing ever attaches `messenger.message_handler` to it — so `AsyncImportPass` removes it,
+     * the same reasoning `OptionalContractPass` applies to the entity-manager-dependent three.
+     */
+    public function testTheImportMessageHandlerIsAbsentWithoutMessenger(): void
+    {
+        // ⚠️ `enabled: false` explicitly: `symfony/messenger` is a require-dev of THIS bundle (used
+        // by this very test suite), and Symfony's own `enableIfStandalone()` turns messenger on by
+        // default the moment the package is merely INSTALLED — a real consumer who has not touched
+        // messenger at all would never reach that default, but this test kernel would, silently
+        // proving nothing, without this override.
+        $container = $this->boot(withOrm: true, extraConfig: [
+            'framework' => ['messenger' => ['enabled' => false]],
+        ]);
+
+        self::assertFalse($container->has('messenger.default_bus'), 'This test proves nothing if messenger configured itself anyway.');
+        self::assertFalse($container->has(ImportMessageHandler::class));
+    }
+
+    /**
+     * ⚠️ Present, correctly TAGGED, and actually REACHED once `framework.messenger` is configured —
+     * proven by ACTUALLY DISPATCHING a message through the real bus, not by asserting the service
+     * exists. A handler that exists but was never tagged `messenger.message_handler` would pass a
+     * weaker assertion and still do nothing in production; `NoHandlerForMessageException` is
+     * exactly the failure a missing tag produces, and it is what a first version of this test,
+     * relying on `#[AsMessageHandler]` alone, actually got.
+     *
+     * ⚠️ **No `ImportMapperFactoryInterface` is bound in this test kernel**, deliberately: injecting
+     * one into an already-compiled container via `$container->set()` does not reach a constructor
+     * argument Symfony already wired at compile time, so a factory "bound" that way would prove
+     * nothing about production wiring. The handler's own `\LogicException` — reached only if
+     * dispatch and tagging both worked — is the assertion instead.
+     */
+    public function testTheImportMessageHandlerIsTaggedAndActuallyInvokedByTheBus(): void
+    {
+        $container = $this->boot(withOrm: true, extraConfig: [
+            'framework' => ['messenger' => ['transports' => ['sync' => 'sync://']]],
+        ]);
+
+        self::assertTrue($container->has('messenger.default_bus'), 'This test proves nothing if messenger did not actually configure itself.');
+
+        $bus = $container->get('messenger.default_bus');
+        self::assertInstanceOf(MessageBusInterface::class, $bus);
+
+        try {
+            $bus->dispatch(new ImportMessage(
+                importId: 'wiring-1',
+                filePath: '/does/not/matter/for/this/assertion.csv',
+                mapping: [0 => 'name', 1 => 'email'],
+                mapperId: 'customer',
+            ));
+
+            self::fail('The handler has no mapper factory bound; it must refuse.');
+        } catch (HandlerFailedException $failure) {
+            $wrapped = array_values($failure->getWrappedExceptions());
+            self::assertCount(1, $wrapped);
+            self::assertInstanceOf(\LogicException::class, $wrapped[0]);
+            self::assertStringContainsString('customer', $wrapped[0]->getMessage());
+        }
     }
 }

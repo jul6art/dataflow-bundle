@@ -6,6 +6,7 @@ namespace Jul6Art\DataflowBundle\DependencyInjection\Compiler;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Jul6Art\AclBundle\Contract\FeatureCheckerInterface;
+use Jul6Art\DataflowBundle\Import\Async\ImportMessageHandler;
 use Jul6Art\DataflowBundle\Import\ImportRunner;
 use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
@@ -60,7 +61,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * ⚠️ **This bundle requires `doctrine/orm`, the library, and deliberately not
  * `doctrine/doctrine-bundle`, the integration.** So `EntityManagerInterface` may genuinely have no
  * service behind it — in an application that only writes exports from arrays, which is a real and
- * supported use of the `Io/` half. Three services need it, and a bundle that assumed it would
+ * supported use of the `Io/` half. Four services need it, and a bundle that assumed it would
  * refuse to boot there instead of simply offering less.
  *
  * ⚠️ **They are removed in dependency order, deepest first.** Removing `FieldCatalog` while
@@ -76,6 +77,9 @@ final class OptionalContractPass implements CompilerPassInterface
      * @var list<class-string>
      */
     private const array NEEDS_ENTITY_MANAGER = [
+        // ⚠️ ImportMessageHandler first: it depends on ImportRunner, and a removal in the wrong
+        // order leaves a dangling reference that names the WRONG service in Symfony's own error.
+        ImportMessageHandler::class,
         ReportRunner::class,
         ImportRunner::class,
         FieldCatalog::class,

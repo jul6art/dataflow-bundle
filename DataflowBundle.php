@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Jul6Art\DataflowBundle;
 
+use Jul6Art\DataflowBundle\DependencyInjection\Compiler\AsyncImportPass;
 use Jul6Art\DataflowBundle\DependencyInjection\Compiler\OptionalContractPass;
 use Jul6Art\DataflowBundle\Io\Reader\TabularReaderInterface;
 use Jul6Art\DataflowBundle\Io\TabularWriterInterface;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntityProviderInterface;
 use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerInterface;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
@@ -41,7 +43,22 @@ class DataflowBundle extends Bundle
         // the feature checker in the applications that have no feature system — without it their
         // container is unresolvable at COMPILE time, which is a boot failure and not a degraded
         // feature. Two bundles of this ecosystem shipped that defect before, four months apart.
-        $container->addCompilerPass(new OptionalContractPass());
+        //
+        // ⚠️ **Priority 10, ahead of `MessengerPass` (priority 0).** `MessengerPass` collects every
+        // `messenger.message_handler`-tagged service into a locator BY REFERENCE; removing
+        // `ImportMessageHandler` AFTER that collection leaves the locator pointing at a defunct
+        // service — a dangling reference, and a compile-time failure, in EVERY application that has
+        // `symfony/messenger` merely installed (Symfony enables it by default the moment the
+        // package is present) and no `EntityManagerInterface`. Found by this bundle's own test
+        // suite the moment `symfony/messenger` joined `require-dev`: every existing wiring test
+        // that booted without an entity manager started failing, not just the new ones for lot 2.7.
+        $container->addCompilerPass(new OptionalContractPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 10);
+
+        // ⚠️ Same reasoning, a different absent contract: `symfony/messenger` is not a hard
+        // dependency of this bundle (lot 2.7), so `ImportMessageHandler` is removed rather than
+        // left dangling in an application that has not configured a bus. Same priority, for the
+        // same reason: it must run before `MessengerPass` collects handlers by reference.
+        $container->addCompilerPass(new AsyncImportPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 10);
 
         // ⚠️ Autoconfiguration is declared here and NOT relied on inside the bundle: it applies to
         // the APPLICATION's services, which do have `autoconfigure: true`, so a consumer's provider

@@ -691,6 +691,64 @@ and choosing a reader by content" above for how the two are told apart and resol
 ⚠️ Detection is by CONTENT, never by MIME type: a browser sends `application/vnd.ms-excel` for a
 CSV saved out of Excel, so a MIME allow list that admits it admits real `.xls` workbooks too.
 
+### Running an import off the request thread
+
+`ImportRunner::run()` already needs no `Request` and no session — a report scheduler could always
+call it. `ImportMessage` + `ImportMessageHandler` are what let `symfony/messenger` do exactly that:
+
+```php
+use Jul6Art\DataflowBundle\Import\Async\ImportMessage;
+
+$bus->dispatch(new ImportMessage(
+    importId: (string) Uuid::v4(),      // yours: the key ImportProgressStoreInterface keys on
+    filePath: $uploadedPath,
+    mapping: $inspection->mapping,
+    mapperId: 'customer-import',        // yours: what ImportMapperFactoryInterface turns back into a mapper
+    context: ['accountId' => $account->getId()],
+));
+```
+
+⚠️ **The message carries IDENTIFIERS, not objects.** A real transport serialises a message to text;
+a `RowMapperInterface` holding an `EntityManager` or a tenant entity does not survive that, nor
+should it — the worker gets a fresh `EntityManager` of its own. `context` is plain scalars only
+(an account id, most often), and `ImportMapperFactoryInterface` — yours to implement, deliberately
+not aliased to a default — turns `mapperId` + `context` back into a real mapper inside the worker:
+
+```php
+final readonly class MyMapperFactory implements ImportMapperFactoryInterface
+{
+    public function __construct(private EntityManagerInterface $em) {}
+
+    public function mapper(string $mapperId, array $context): RowMapperInterface
+    {
+        return match ($mapperId) {
+            'customer-import' => new CustomerRowMapper($this->em->getReference(Account::class, $context['accountId'])),
+            default => throw new \InvalidArgumentException($mapperId),
+        };
+    }
+
+    public function resolver(?string $resolverId, array $context): ?DuplicateResolverInterface
+    {
+        return null;
+    }
+}
+```
+
+⚠️ **`symfony/messenger` is not required by this bundle.** `ImportMessageHandler` is removed by
+`AsyncImportPass` when the application has not configured a bus — the same way three services are
+removed when there is no `EntityManagerInterface`. Nothing breaks either way; async import is simply
+absent until both are true.
+
+⚠️ **Progress goes through `ImportProgressStoreInterface`**, bound to `PassthroughNumberFormatter`'s
+counterpart, `NullImportProgressStore`, by default. The request that dispatched the message has
+already returned by the time the worker picks it up — bind your own to give a screen something to
+poll:
+
+```yaml
+services:
+    Jul6Art\DataflowBundle\Import\Async\ImportProgressStoreInterface: '@App\Import\DoctrineImportProgressStore'
+```
+
 The screens
 -----------
 
