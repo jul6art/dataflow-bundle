@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Jul6Art\DataflowBundle\Report\Spec;
 
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormat;
+
 /**
  * Turns a raw payload — a decoded JSON column, a form submission — into a bounded {@see ReportSpec}.
  *
@@ -85,10 +87,36 @@ final readonly class ReportSpecInterpreter
                 $path,
                 '' !== $label ? \mb_substr($label, 0, self::MAX_LABEL_LENGTH) : $path,
                 $this->sort($row['sort'] ?? null),
+                $this->format($row['format'] ?? null),
             );
         }
 
         return $columns;
+    }
+
+    /**
+     * ⚠️ Dropped, not refused, on anything it does not recognise — the same rule the rest of this
+     * class follows: a format a future version of an application no longer sends, or a `kind` this
+     * version does not know, must not make an otherwise-valid saved report unopenable.
+     */
+    private function format(mixed $raw): ?ColumnFormat
+    {
+        if (!\is_array($raw)) {
+            return null;
+        }
+
+        $kind = \is_string($raw['kind'] ?? null) ? $raw['kind'] : null;
+        $decimals = \is_int($raw['decimals'] ?? null) ? $raw['decimals'] : null;
+        $currency = \is_string($raw['currency'] ?? null) ? $raw['currency'] : '';
+
+        return match ($kind) {
+            'number' => ColumnFormat::number($decimals),
+            'money' => '' !== $currency ? ColumnFormat::money($currency, $decimals) : null,
+            'percent' => ColumnFormat::percent($decimals ?? 0),
+            'date' => ColumnFormat::date(),
+            'datetime' => ColumnFormat::dateTime(),
+            default => null,
+        };
     }
 
     /**

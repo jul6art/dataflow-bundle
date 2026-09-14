@@ -13,6 +13,9 @@ use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntity;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntityProviderInterface;
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormat;
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormatter;
+use Jul6Art\DataflowBundle\Report\Format\NumberFormatterInterface;
 use Jul6Art\DataflowBundle\Report\ReportResult;
 use Jul6Art\DataflowBundle\Report\ReportRunner;
 use Jul6Art\DataflowBundle\Report\Spec\FilterOperator;
@@ -173,6 +176,82 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ The lot 2.6 proof, end to end: a column's `ColumnFormat` reaches the real query pipeline
+     * and produces the BOUND `NumberFormatterInterface`'s rendering — not the passthrough default,
+     * which a test binding nothing could not tell apart from no formatting having run at all.
+     */
+    public function testAColumnWithAMoneyFormatIsRenderedByTheBoundFormatter(): void
+    {
+        $this->seed(1);
+
+        $numbers = new class implements NumberFormatterInterface {
+            #[\Override]
+            public function format(int|float|string|null $value, ?int $decimals = null): string
+            {
+                return 'N:'.$value;
+            }
+
+            #[\Override]
+            public function formatMoney(int|float|string|null $value, string $currency, ?int $decimals = null): string
+            {
+                return 'M:'.$value.' '.$currency;
+            }
+
+            #[\Override]
+            public function formatPercent(int|float|string|null $value, int $decimals = 0): string
+            {
+                return 'P:'.$value;
+            }
+        };
+
+        $spec = new ReportSpec(Invoice::class, [
+            new ReportColumn('total', 'Total', format: ColumnFormat::money('EUR')),
+        ]);
+
+        $rows = iterator_to_array($this->runner(columnFormatter: new ColumnFormatter($numbers))->run($spec, $this->actor())->rows());
+
+        self::assertSame('M:0 EUR', $rows[0]['total']);
+    }
+
+    /**
+     * ⚠️ Without a format, `total` reaches the writer exactly as it did before this lot existed:
+     * `ColumnFormatter::format()` is a no-op on a `null` format, so whatever raw shape
+     * `HYDRATE_SCALAR` gives the value — an `int`, here, under SQLite's own scalar hydration of a
+     * `decimal` column — is what a report already produced. Pinned here so a later change to
+     * either pass cannot silently start touching an unformatted column.
+     */
+    public function testAColumnWithNoFormatIsUnaffectedByLot26(): void
+    {
+        $this->seed(1);
+
+        $spec = new ReportSpec(Invoice::class, [new ReportColumn('total', 'Total')]);
+
+        $rows = iterator_to_array($this->runner()->run($spec, $this->actor())->rows());
+
+        self::assertSame(0, $rows[0]['total']);
+    }
+
+    /**
+     * ⚠️ `issuedAt` is a `DateTimeInterface` reaching {@see ColumnFormatter} before
+     * `DateTimeValueTransformer` ever sees it — proof the two passes do not compete for the same
+     * value, and that a formatted date reaches the writer as the configured pattern, not ISO.
+     */
+    public function testAColumnWithADateFormatBypassesTheIsoTransformer(): void
+    {
+        $this->seed(1);
+
+        $spec = new ReportSpec(Invoice::class, [
+            new ReportColumn('issuedAt', 'Issued', format: ColumnFormat::date()),
+        ]);
+
+        $rows = iterator_to_array(
+            $this->runner(columnFormatter: new ColumnFormatter(dateFormat: 'd/m/Y'))->run($spec, $this->actor())->rows(),
+        );
+
+        self::assertMatchesRegularExpression('#^\d{2}/\d{2}/\d{4}$#', (string) $rows[0]['issuedAt']);
+    }
+
+    /**
      * ⚠️ The gate is re-checked HERE. A crafted payload reaches this method without passing any
      * dropdown.
      */
@@ -315,7 +394,7 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
     /**
      * @param list<string> $granted
      */
-    private function runner(array $granted = ['invoice:read', 'customer:read']): ReportRunner
+    private function runner(array $granted = ['invoice:read', 'customer:read'], ?ColumnFormatter $columnFormatter = null): ReportRunner
     {
         $entityManager = $this->entityManager();
 
@@ -338,6 +417,7 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
             $entities,
             new FieldCatalog($entityManager, $entities),
             new ValueTransformerChain([new DateTimeValueTransformer(), new EnumValueTransformer()]),
+            $columnFormatter ?? new ColumnFormatter(),
         );
     }
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Jul6Art\DataflowBundle\Tests\Report\Spec;
 
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormat;
+use Jul6Art\DataflowBundle\Report\Format\Kind;
 use Jul6Art\DataflowBundle\Report\Spec\FilterOperator;
 use Jul6Art\DataflowBundle\Report\Spec\ReportSpec;
 use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
@@ -222,5 +224,64 @@ final class ReportSpecInterpreterTest extends TestCase
 
         self::assertFalse($spec->hasColumns());
         self::assertSame([], $spec->header());
+    }
+
+    public function testAColumnWithNoFormatKeyStaysUnformatted(): void
+    {
+        $spec = new ReportSpecInterpreter()->interpret([
+            'entity' => \DateTimeImmutable::class,
+            'columns' => [['path' => 'total']],
+        ]);
+
+        self::assertNull($spec->columns[0]->format);
+    }
+
+    /**
+     * @return iterable<string, array{mixed, ColumnFormat|null}>
+     */
+    public static function formatPayloads(): iterable
+    {
+        yield 'number' => [['kind' => 'number', 'decimals' => 3], ColumnFormat::number(3)];
+        yield 'money' => [['kind' => 'money', 'currency' => 'EUR'], ColumnFormat::money('EUR')];
+        yield 'money without a currency is dropped' => [['kind' => 'money'], null];
+        yield 'percent' => [['kind' => 'percent', 'decimals' => 1], ColumnFormat::percent(1)];
+        yield 'date' => [['kind' => 'date'], ColumnFormat::date()];
+        yield 'datetime' => [['kind' => 'datetime'], ColumnFormat::dateTime()];
+        yield 'an unknown kind is dropped, not fatal' => [['kind' => 'sounds-nice'], null];
+        yield 'not an array at all' => ['money', null];
+    }
+
+    /**
+     * ⚠️ Dropped rather than refused, like an unknown operator: a `kind` a future version stops
+     * sending must not make an otherwise-valid saved report unopenable.
+     */
+    #[DataProvider('formatPayloads')]
+    public function testAColumnFormatIsInterpretedOrDropped(mixed $payload, ?ColumnFormat $expected): void
+    {
+        $spec = new ReportSpecInterpreter()->interpret([
+            'entity' => \DateTimeImmutable::class,
+            'columns' => [['path' => 'total', 'format' => $payload]],
+        ]);
+
+        self::assertEquals($expected, $spec->columns[0]->format);
+    }
+
+    /**
+     * ⚠️ `Kind` alone does not distinguish `money('EUR')` from `money('USD')` — the currency and
+     * decimals have to be asserted too, or a payload swapping the currency would pass this suite
+     * unnoticed.
+     */
+    public function testMoneyCarriesItsCurrencyAndDecimals(): void
+    {
+        $spec = new ReportSpecInterpreter()->interpret([
+            'entity' => \DateTimeImmutable::class,
+            'columns' => [['path' => 'total', 'format' => ['kind' => 'money', 'currency' => 'CHF', 'decimals' => 3]]],
+        ]);
+
+        $format = $spec->columns[0]->format;
+        self::assertNotNull($format);
+        self::assertSame(Kind::Money, $format->kind);
+        self::assertSame('CHF', $format->currency);
+        self::assertSame(3, $format->decimals);
     }
 }

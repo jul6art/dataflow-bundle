@@ -10,6 +10,8 @@ use Doctrine\ORM\QueryBuilder;
 use Jul6Art\AclBundle\Contract\AclUserInterface;
 use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormat;
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormatter;
 use Jul6Art\DataflowBundle\Report\Spec\FilterOperator;
 use Jul6Art\DataflowBundle\Report\Spec\ReportColumn;
 use Jul6Art\DataflowBundle\Report\Spec\ReportFilter;
@@ -44,6 +46,13 @@ use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain;
  * `$scope` closure that receives the root alias and the query builder. Inventing an
  * `organization` column here would work for exactly one of the three applications this bundle
  * serves, and would silently return everything for the other two.
+ *
+ * ## A column's own format runs before the transformer chain
+ *
+ * ⚠️ {@see \Jul6Art\DataflowBundle\Report\Spec\ReportColumn::$format} (lot 2.6), when set, is
+ * applied to that column's raw value BEFORE `$transformers->transformRow()` sees the row. A column
+ * with no format is untouched — {@see \Jul6Art\DataflowBundle\Report\Format\ColumnFormatter::format()}
+ * returns it unchanged — so every report built before this existed renders exactly as it did.
  */
 final readonly class ReportRunner
 {
@@ -54,6 +63,7 @@ final readonly class ReportRunner
         private EntityCatalog $entities,
         private FieldCatalog $fields,
         private ValueTransformerChain $transformers = new ValueTransformerChain(),
+        private ColumnFormatter $columnFormatter = new ColumnFormatter(),
     ) {
     }
 
@@ -84,11 +94,13 @@ final readonly class ReportRunner
         $query = $this->build($spec, $limit, $offset, $scope);
 
         $paths = \array_map(static fn (ReportColumn $c): string => $c->path, $spec->columns);
+        $formats = \array_map(static fn (ReportColumn $c): ?ColumnFormat => $c->format, $spec->columns);
         $transformers = $this->transformers;
+        $columnFormatter = $this->columnFormatter;
 
         return new ReportResult(
             $spec->header(),
-            static function () use ($query, $paths, $transformers): \Generator {
+            static function () use ($query, $paths, $formats, $transformers, $columnFormatter): \Generator {
                 // ⚠️ `toIterable()`, not `getArrayResult()`. This is the whole fix: Doctrine yields
                 // one row at a time from the driver's cursor, so peak memory is one row rather than
                 // the result set — twice over, once the caller re-keyed it.
@@ -100,7 +112,11 @@ final readonly class ReportRunner
                     $out = [];
 
                     foreach ($paths as $index => $path) {
-                        $out[$path] = $row['c'.$index] ?? null;
+                        // ⚠️ A column's OWN format runs first and produces a plain scalar; the
+                        // transformer chain that follows only ever sees a DateTimeInterface / bool /
+                        // BackedEnum on a column that did NOT opt in, so the two passes never
+                        // compete for the same value.
+                        $out[$path] = $columnFormatter->format($row['c'.$index] ?? null, $formats[$index]);
                     }
 
                     yield $transformers->transformRow($out);

@@ -300,6 +300,70 @@ copies of a 50 000-row result set before emitting a byte.
 `$scope` closure receiving the query builder and the root alias. Inventing an `organization`
 column here would fit one consumer and silently return everything for the others.
 
+### Formatting a column
+
+By default a column renders exactly as it always has — ISO for a date, the raw value for a number.
+Give a `ReportColumn` a `ColumnFormat` to ask for something else:
+
+```php
+use Jul6Art\DataflowBundle\Report\Format\ColumnFormat;
+use Jul6Art\DataflowBundle\Report\Spec\ReportColumn;
+
+new ReportColumn('total', 'Total', format: ColumnFormat::money('EUR'));
+new ReportColumn('vatRate', 'VAT', format: ColumnFormat::percent(1));
+new ReportColumn('issuedAt', 'Issued', format: ColumnFormat::date());
+```
+
+Four kinds: `number()`, `money($currency)`, `percent()`, `date()` / `dateTime()`. `number()`,
+`money()` and `percent()` delegate to `NumberFormatterInterface` — bind your own (see below) to
+render in your application's convention instead of the bundle's plain default. `date()` and
+`dateTime()` use a configurable PHP format string, because there is no locale-aware date service to
+delegate to; reconfigure `ColumnFormatter`'s two patterns once, for the application.
+
+⚠️ **A date column reaching this class is usually already a STRING, not a `DateTimeInterface`** —
+`ReportRunner` hydrates with `HYDRATE_SCALAR`, and a Doctrine `date`/`datetime` column comes back as
+its ISO text under scalar hydration, on SQLite as on PostgreSQL. Verified, not assumed:
+`DateTimeValueTransformer`'s own `instanceof` check is inert on this exact pipeline. `ColumnFormat::date()`
+therefore accepts either shape, parsing the string case itself.
+
+### Rendering numbers in your own convention
+
+```yaml
+services:
+    Jul6Art\DataflowBundle\Report\Format\NumberFormatterInterface: '@App\Report\NumberFormatterAdapter'
+```
+
+`NumberFormatterInterface` mirrors `jul6art/core-bundle`'s `NumberFormatter` on purpose — same three
+method names, same signatures — but this bundle does not require `core-bundle` (it sits in
+`require-dev` here, used by this bundle's own tests only), the same reasoning that keeps it free of
+`api-platform`. A consumer with `core-bundle` writes the few lines that bridge the two:
+
+```php
+final readonly class NumberFormatterAdapter implements NumberFormatterInterface
+{
+    public function __construct(private \Jul6Art\CoreBundle\Service\NumberFormatter $inner) {}
+
+    public function format(int|float|string|null $value, ?int $decimals = null): string
+    {
+        return $this->inner->format($value, $decimals);
+    }
+
+    public function formatMoney(int|float|string|null $value, string $currency, ?int $decimals = null): string
+    {
+        return $this->inner->formatMoney($value, $currency, $decimals);
+    }
+
+    public function formatPercent(int|float|string|null $value, int $decimals = 0): string
+    {
+        return $this->inner->formatPercent($value, $decimals);
+    }
+}
+```
+
+With nothing bound, `PassthroughNumberFormatter` keeps every `ColumnFormat::number()`/`money()`/
+`percent()` column working — plain, not localised, the same role `NullExportAuditor` plays for
+auditing.
+
 ### The fields endpoint
 
 The screen asks your application for the columns it may offer, and the answer must be serialised

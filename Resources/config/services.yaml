@@ -81,6 +81,18 @@ services:
         arguments:
             $transformers: !tagged_iterator dataflow.value_transformer
 
+    # ⚠️ A consumer with `jul6art/core-bundle` re-aliases NumberFormatterInterface to an adapter
+    # around its own `NumberFormatter` (README, lot 2.6) and every `ColumnFormat::number()` /
+    # `money()` / `percent()` column picks up the application's own convention. With nothing
+    # rebound, PassthroughNumberFormatter keeps the bundle working — the same shape as
+    # `LimitsProviderInterface` / `ExportAuditorInterface` above.
+    Jul6Art\DataflowBundle\Report\Format\PassthroughNumberFormatter: ~
+    Jul6Art\DataflowBundle\Report\Format\NumberFormatterInterface: '@Jul6Art\DataflowBundle\Report\Format\PassthroughNumberFormatter'
+
+    Jul6Art\DataflowBundle\Report\Format\ColumnFormatter:
+        arguments:
+            $numbers: '@Jul6Art\DataflowBundle\Report\Format\NumberFormatterInterface'
+
     Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog:
         arguments:
             $permissions: '@Jul6Art\AclBundle\Security\PermissionDecisionService'
@@ -111,6 +123,7 @@ services:
             $entities: '@Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog'
             $fields: '@Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog'
             $transformers: '@Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerChain'
+            $columnFormatter: '@Jul6Art\DataflowBundle\Report\Format\ColumnFormatter'
 
     Jul6Art\DataflowBundle\Import\ImportRunner:
         arguments:
