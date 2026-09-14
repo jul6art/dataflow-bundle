@@ -370,6 +370,10 @@
                 <source>dataflow.builder.export.heading</source>
                 <target>Preview, export, save</target>
             </trans-unit>
+            <trans-unit id="dataflow.builder.export.row_limit_warning" resname="dataflow.builder.export.row_limit_warning">
+                <source>dataflow.builder.export.row_limit_warning</source>
+                <target>An export is capped at %limit% rows. A report with more will be truncated without a separate error.</target>
+            </trans-unit>
             <trans-unit id="dataflow.builder.export.preview" resname="dataflow.builder.export.preview">
                 <source>dataflow.builder.export.preview</source>
                 <target>Preview</target>

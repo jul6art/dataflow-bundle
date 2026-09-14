@@ -55,7 +55,7 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
      * so a Twig extension class would have to be registered conditionally anyway, and a global is
      * one line the consumer can also override in their own `twig.yaml`.
      */
-    private function exposeTwigGlobals(ContainerBuilder $container, string $stimulus, string $domain): void
+    private function exposeTwigGlobals(ContainerBuilder $container, string $stimulus, string $domain, int $exportRowLimit): void
     {
         if (!$container->hasExtension('twig')) {
             return;
@@ -65,6 +65,13 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
             'globals' => [
                 'dataflow_stimulus' => $stimulus,
                 'dataflow_domain' => $domain,
+                // ⚠️ Read from the SAME configuration this bundle validates a few lines above, not
+                // re-typed — a warning that names a different number than the ceiling `ReportRunner`
+                // actually enforces would be worse than no warning: an operator who exports 40 000
+                // rows without being warned, then hits a SILENT truncation at 50 000, has to notice
+                // on their own that the file is short. The one this bundle shows names the real
+                // number, in every project that includes the shipped partial, with nothing to wire.
+                'dataflow_export_row_limit' => $exportRowLimit,
             ],
         ]);
     }
@@ -117,7 +124,13 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
         $container->setParameter('dataflow.translation_domain', self::domain($config));
         $container->setParameter('dataflow.stimulus_identifier', self::stimulus($config));
 
-        $this->exposeTwigGlobals($container, self::stimulus($config), self::domain($config));
+        // ⚠️ Read back the PARAMETER the loop above just set, not a second look at `$limits` — one
+        // validated value, one source of truth for both the parameter another bundle's YAML can
+        // interpolate and the number this bundle's own partial shows.
+        $exportRowLimit = $container->getParameter('dataflow.limits.export_rows');
+        \assert(\is_int($exportRowLimit));
+
+        $this->exposeTwigGlobals($container, self::stimulus($config), self::domain($config), $exportRowLimit);
     }
 
     #[\Override]

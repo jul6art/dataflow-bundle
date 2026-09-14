@@ -121,6 +121,16 @@
     <div class="form-panel step-panel" data-{{ stimulus }}-target="stepExport" hidden>
         <h2 class="form-section-title">{{ 'dataflow.builder.export.heading'|trans({}, 'dataflow') }}</h2>
 
+        {# ⚠️ `dataflow_export_row_limit` is a Twig GLOBAL (DataflowExtension::exposeTwigGlobals()),
+           read from the SAME configuration ReportRunner enforces — never a literal here, which
+           would drift the day a project raises or lowers `dataflow.limits.export_rows` in its own
+           configuration. Every project that includes this partial gets the warning for free,
+           naming its OWN actual ceiling, with nothing to wire. #}
+        <p class="text-xs text-amber-600 dark:text-amber-400 mb-4 flex items-start gap-2">
+            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+            <span>{{ 'dataflow.builder.export.row_limit_warning'|trans({'%limit%': dataflow_export_row_limit|number_format(0)}, 'dataflow') }}</span>
+        </p>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <fieldset class="form-fieldset !mb-0">
                 <legend class="text-xs">{{ 'dataflow.builder.export.preview'|trans({}, 'dataflow') }}</legend>

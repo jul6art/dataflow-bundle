@@ -845,6 +845,11 @@ permission code it invented: the codes are yours, and a guessed one answers fals
 hides the control on every screen and looks like a broken feature. Hiding it is not the guard
 either — the payload carries `shareScope`, so the server has to refuse it too.
 
+⚠️ **The export step warns about the row ceiling on its own, in every project that includes this
+partial.** The number comes from a Twig global (`dataflow_export_row_limit`), set from the SAME
+`dataflow.limits.export_rows` configuration `ReportRunner` enforces — nothing to pass, and nothing
+that can drift from the real ceiling the way a hard-coded number in your own template could.
+
 #### What the five endpoints exchange
 
 The shipped controller posts `multipart/form-data` and reads JSON. Getting a field name wrong here

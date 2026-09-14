@@ -62,6 +62,32 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ The number shown is the CONFIGURED ceiling, not a literal in the template — proven by
+     * changing the configuration and checking the page changes with it. A warning naming a
+     * different number than the one `ReportRunner` actually enforces would be worse than none: an
+     * operator who exports without being warned hits a silent truncation and has to notice, on
+     * their own, that the file came back short.
+     */
+    public function testTheExportPanelWarnsWithTheConfiguredRowLimit(): void
+    {
+        $html = $this->render(
+            '@Dataflow/report/_builder.html.twig',
+            [
+                'entities' => [],
+                'fields_url' => '/f',
+                'run_url' => '/r',
+                'export_url' => '/e',
+                'save_url' => '/s',
+                'load_url' => '/l/{id}',
+                'can_share' => false,
+            ],
+            bundleConfig: ['limits' => ['export_rows' => 12345]],
+        );
+
+        self::assertStringContainsString('12,345', $html);
+    }
+
+    /**
      * ⚠️ **A partial's leading comment must not reach the page.** Twig comments do not nest, so an
      * inner `{# … #}` in a usage example closes the outer one at that point and every line after it
      * becomes literal output — thirteen lines of prose and five `path()` calls printed above the
@@ -227,10 +253,11 @@ final class PartialsTest extends AbstractFunctionalTestCase
 
     /**
      * @param array<string, mixed> $context
+     * @param array<string, mixed> $bundleConfig
      */
-    private function render(string $template, array $context): string
+    private function render(string $template, array $context, array $bundleConfig = []): string
     {
-        $twig = $this->boot(withTwig: true)->get('twig');
+        $twig = $this->boot(bundleConfig: $bundleConfig, withTwig: true)->get('twig');
         self::assertInstanceOf(Environment::class, $twig);
 
         return $twig->render($template, $context);
