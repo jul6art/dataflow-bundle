@@ -121,6 +121,28 @@ final class FieldCatalog
     }
 
     /**
+     * The Doctrine type of an already-catalogued path, or `null` when the path is not in it — the
+     * same list {@see self::isPathAllowed()} reads, so a path this refuses is a path
+     * {@see self::assertPathAllowed()} would already have refused by the time this is asked.
+     *
+     * @param class-string $rootFqcn
+     */
+    public function typeOf(
+        string $rootFqcn,
+        AclUserInterface $actor,
+        string $path,
+        int $maxDepth = self::DEFAULT_MAX_DEPTH,
+    ): ?string {
+        foreach ($this->listFor($rootFqcn, $actor, $maxDepth) as $field) {
+            if ($field->path === $path) {
+                return $field->type;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The runtime guard, called before a path reaches a query builder.
      *
      * ⚠️ It exists because the screen is not the only way in: a crafted payload naming

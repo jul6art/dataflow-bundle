@@ -91,7 +91,7 @@ final readonly class ReportRunner
             return new ReportResult([], static fn (): \Generator => yield from []);
         }
 
-        $query = $this->build($spec, $limit, $offset, $scope);
+        $query = $this->build($spec, $actor, $limit, $offset, $scope);
 
         $paths = \array_map(static fn (ReportColumn $c): string => $c->path, $spec->columns);
         $formats = \array_map(static fn (ReportColumn $c): ?ColumnFormat => $c->format, $spec->columns);
@@ -135,7 +135,7 @@ final readonly class ReportRunner
      *
      * @return \Doctrine\ORM\Query<null, mixed>
      */
-    private function build(ReportSpec $spec, int $limit, int $offset, ?\Closure $scope): \Doctrine\ORM\Query
+    private function build(ReportSpec $spec, AclUserInterface $actor, int $limit, int $offset, ?\Closure $scope): \Doctrine\ORM\Query
     {
         $qb = $this->entityManager->createQueryBuilder()->from($spec->rootEntity, 'root');
 
@@ -157,7 +157,8 @@ final readonly class ReportRunner
         $parameters = 0;
 
         foreach ($spec->filters as $filter) {
-            $this->applyFilter($qb, $this->resolve($qb, $filter->path, $joins, $aliases), $filter, $parameters);
+            $fieldType = $this->fields->typeOf($spec->rootEntity, $actor, $filter->path);
+            $this->applyFilter($qb, $this->resolve($qb, $filter->path, $joins, $aliases), $filter, $parameters, $fieldType);
         }
 
         return $qb
@@ -198,7 +199,7 @@ final readonly class ReportRunner
         return $alias.'.'.$scalar;
     }
 
-    private function applyFilter(QueryBuilder $qb, string $expression, ReportFilter $filter, int &$parameters): void
+    private function applyFilter(QueryBuilder $qb, string $expression, ReportFilter $filter, int &$parameters, ?string $fieldType): void
     {
         // ⚠️ A valueless operator binds nothing. The enum's arity is the single place that decides,
         // so a stale payload cannot bind a parameter the DQL never names.
@@ -213,12 +214,13 @@ final readonly class ReportRunner
         }
 
         $name = 'p'.(++$parameters);
+        $value = $this->castForField($filter->value, $fieldType);
 
         if (FilterOperator::Between === $filter->operator) {
             $second = 'p'.(++$parameters);
             $qb->andWhere(\sprintf('%s BETWEEN :%s AND :%s', $expression, $name, $second))
-                ->setParameter($name, $filter->value)
-                ->setParameter($second, $filter->secondValue);
+                ->setParameter($name, $value)
+                ->setParameter($second, $this->castForField($filter->secondValue, $fieldType));
 
             return;
         }
@@ -241,7 +243,36 @@ final readonly class ReportRunner
             $expression,
             $this->comparison($filter->operator),
             $name,
-        ))->setParameter($name, $filter->value);
+        ))->setParameter($name, $value);
+    }
+
+    /**
+     * ⚠️ A filter's value ALWAYS arrives as a string — it is parsed off a query string, whether
+     * typed by a user or read from a `static`/`api` datatable option (`"true"` / `"false"`). Bound
+     * as-is against a Doctrine `boolean` column, `root.isActive = :p1` compares the STORED boolean
+     * to the literal text — which a weakly-typed driver (SQLite) never matches, either way, and a
+     * strict one rejects outright: found on the first `static` filter wired through a real export,
+     * silently rendering zero rows instead of the expected count.
+     *
+     * ⚠️ Scoped to `boolean` alone, not attempted generically for every Doctrine type: an `integer`
+     * or `decimal` column already round-trips a numeric STRING correctly through most drivers' own
+     * parameter binding, and guessing a cast for every type this bundle does not exercise would
+     * trade one silent wrong answer for another, less understood one.
+     */
+    private function castForField(mixed $value, ?string $fieldType): mixed
+    {
+        if ('boolean' !== $fieldType) {
+            return $value;
+        }
+
+        if (\is_array($value)) {
+            return \array_map(
+                static fn (mixed $v): mixed => \is_string($v) ? \filter_var($v, \FILTER_VALIDATE_BOOLEAN) : $v,
+                $value,
+            );
+        }
+
+        return \is_string($value) ? \filter_var($value, \FILTER_VALIDATE_BOOLEAN) : $value;
     }
 
     /**

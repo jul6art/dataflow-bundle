@@ -301,6 +301,37 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ A filter's value always arrives as a STRING — parsed off a query string, whether typed by
+     * hand or read from a `static`/`api` datatable option (`"true"` / `"false"`). Bound as-is
+     * against `paid`, a real `boolean` column, `root.paid = :p1` compares the stored boolean to the
+     * literal text — found on the first `static` filter wired through a real datatable export
+     * (lot 2.8), where it rendered zero rows instead of the expected count, silently, on EITHER
+     * value: neither `"true"` nor `"false"` ever matched anything.
+     */
+    public function testAStringValuedFilterOnABooleanFieldMatchesByValueNotByText(): void
+    {
+        $this->seed(1);
+
+        $entityManager = $this->entityManager();
+        $paidInvoice = new Invoice();
+        $paidInvoice->number = 'INV-PAID';
+        $paidInvoice->paid = true;
+        $entityManager->persist($paidInvoice);
+        $entityManager->flush();
+
+        $spec = new ReportSpec(
+            Invoice::class,
+            [new ReportColumn('number', 'Number')],
+            [new ReportFilter('paid', FilterOperator::Equals, 'true')],
+        );
+
+        self::assertSame(
+            [['number' => 'INV-PAID']],
+            iterator_to_array($this->runner()->run($spec, $this->actor())->rows()),
+        );
+    }
+
+    /**
      * ⚠️ The null check goes through the relation's IDENTIFIER, not the relation itself. The field
      * catalogue lists SELECTABLE SCALARS, so `customer` alone is not a path and is refused — which
      * is the right contract: a catalogue that also listed bare relations would offer things that

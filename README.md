@@ -300,6 +300,15 @@ copies of a 50 000-row result set before emitting a byte.
 `$scope` closure receiving the query builder and the root alias. Inventing an `organization`
 column here would fit one consumer and silently return everything for the others.
 
+⚠️ **A filter's value on a `boolean` field is cast from its string shape.** `ReportFilter::$value`
+routinely arrives as `"true"` / `"false"` — parsed off a query string, whatever built the spec — and
+bound as-is against a real Doctrine `boolean` column, a plain `=` compares the stored value to the
+literal text, which no driver ever matches either way. The runner reads the field's own Doctrine
+type from `FieldCatalog` and applies `filter_var(…, FILTER_VALIDATE_BOOLEAN)` before binding, for
+every operator that carries a value. Every other Doctrine type is left alone — most already
+round-trip a numeric string correctly through their driver's own parameter binding, and guessing a
+cast for a type this bundle does not exercise would trade one silent wrong answer for another.
+
 ### Formatting a column
 
 By default a column renders exactly as it always has — ISO for a date, the raw value for a number.
