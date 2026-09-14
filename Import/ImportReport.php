@@ -15,8 +15,10 @@ namespace Jul6Art\DataflowBundle\Import;
  * them: `errorCount()` is the truth, `errors()` is the sample, and `errorsWereTruncated()` says so
  * out loud rather than letting a screen imply the file had exactly a hundred problems.
  *
- * A downloadable, complete error file is a separate mechanism — errors streamed to a writer as they
- * happen, never accumulated — and is a later lot. Capping here is what keeps that door open.
+ * A downloadable, complete error file is the separate mechanism this capping keeps room for:
+ * {@see ErrorSinkInterface}, given to the constructor, receives every error as {@see self::recordError()}
+ * is called — never asked for the accumulated list — so a 50 000-row file costs this class the same
+ * hundred-entry sample it always kept, and costs the sink one row written immediately.
  *
  * ## The counters are disjoint, on purpose
  *
@@ -47,6 +49,7 @@ final class ImportReport
 
     public function __construct(
         private readonly bool $dryRun = false,
+        private readonly ?ErrorSinkInterface $errorSink = null,
     ) {
     }
 
@@ -77,6 +80,7 @@ final class ImportReport
     public function recordError(int $record, string $message): void
     {
         ++$this->errorCount;
+        $this->errorSink?->record($record, $message);
 
         if (\count($this->errors) < self::MAX_RETAINED_ERRORS) {
             $this->errors[] = ['record' => $record, 'message' => $message];

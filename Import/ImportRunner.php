@@ -67,6 +67,7 @@ final readonly class ImportRunner
         RowMapperInterface $mapper,
         TabularReaderInterface $reader,
         ?DuplicateResolverInterface $duplicates = null,
+        ?ErrorSinkInterface $errorSink = null,
     ): ImportReport {
         // ⚠️ Refused here, loudly, rather than run: with no resolver `$existing` is always `null`,
         // which is indistinguishable from every row being new — an `Update` policy that updates
@@ -75,7 +76,7 @@ final readonly class ImportRunner
             throw new \InvalidArgumentException('DuplicatePolicy::Update requires a duplicate resolver; none was given.');
         }
 
-        $report = new ImportReport($spec->dryRun);
+        $report = new ImportReport($spec->dryRun, $errorSink);
 
         // A dry run writes nothing, so there is nothing to wrap and nothing to roll back.
         $transactional = $spec->atomic && !$spec->dryRun;

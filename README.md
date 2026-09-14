@@ -557,10 +557,42 @@ public function map(array $row, ?object $existing = null): Customer
 }
 ```
 
+### A downloadable, complete error list
+
+`ImportReport::errors()` keeps only the first `ImportReport::MAX_RETAINED_ERRORS` — a screen was
+never meant to render fifty thousand rows. For the COMPLETE list, give the runner a sink instead of
+reading it back from the report:
+
+```php
+use Jul6Art\DataflowBundle\Import\Sink\CsvErrorSink;
+
+$handle = fopen('php://temp', 'w+');
+$sink = new CsvErrorSink($handle);
+
+$report = $runner->run($spec, $mapper, $reader, $resolver, errorSink: $sink);
+
+if ($report->errorCount() > 0) {
+    rewind($handle);
+    // stream $handle back as a download — every error, not the report's hundred-row sample
+}
+fclose($handle);
+```
+
+⚠️ **A sink is written to, one row at a time, as `ImportRunner` finds each error — never asked for
+the accumulated list.** That is what keeps a run with fifty thousand errors from costing fifty
+thousand entries of PHP memory: `CsvErrorSink` calls `fputcsv` on your handle immediately, on the
+same dialect and through the same `FormulaInjectionGuard` a `TabularWriterInterface` would use.
+
+⚠️ **This is not a `TabularWriterInterface`, on purpose.** A writer's contract pulls a complete
+`iterable` in one call; an import's errors are pushed, one at a time, from inside a run that has not
+finished. The handle is yours to open and close — a sink that owned its own temporary file would
+still have to hand it back for the download that follows.
+
 ### A spreadsheet uploaded instead of a CSV
 
-`CsvReader` refuses it by name — `dataflow.import.error.binary_spreadsheet` — instead of reading
-its bytes as text. Reading XLSX is a later lot; until then the message tells the user what to do.
+`CsvReader` refuses a binary workbook by name — `dataflow.import.error.binary_spreadsheet` —
+instead of reading its bytes as text. `XlsxReader` reads a real `.xlsx`; see "A real spreadsheet,
+and choosing a reader by content" above for how the two are told apart and resolved by content.
 
 ⚠️ Detection is by CONTENT, never by MIME type: a browser sends `application/vnd.ms-excel` for a
 CSV saved out of Excel, so a MIME allow list that admits it admits real `.xls` workbooks too.

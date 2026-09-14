@@ -7,11 +7,14 @@ namespace Jul6Art\DataflowBundle\Tests\Functional;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 use Jul6Art\DataflowBundle\Exception\ImportFailedException;
+use Jul6Art\DataflowBundle\Import\ErrorSinkInterface;
 use Jul6Art\DataflowBundle\Import\ImportReport;
 use Jul6Art\DataflowBundle\Import\ImportRunner;
 use Jul6Art\DataflowBundle\Import\RowMapperInterface;
+use Jul6Art\DataflowBundle\Import\Sink\CsvErrorSink;
 use Jul6Art\DataflowBundle\Import\Spec\DuplicatePolicy;
 use Jul6Art\DataflowBundle\Import\Spec\ImportSpec;
+use Jul6Art\DataflowBundle\Io\Dialect\CsvDialect;
 use Jul6Art\DataflowBundle\Io\Reader\CsvReader;
 use Jul6Art\DataflowBundle\Tests\Fixtures\Entity\Account;
 use Jul6Art\DataflowBundle\Tests\Fixtures\Entity\Customer;
@@ -241,6 +244,37 @@ final class ImportRunnerTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ The integration proof for {@see ErrorSinkInterface}: the
+     * runner threads it all the way from `run()`'s argument to `ImportReport::recordError()`, on a
+     * REAL run against a real reader and a real mapper — not a unit test standing in for the wiring.
+     */
+    public function testAnErrorSinkReceivesEveryErrorAsTheRunHappens(): void
+    {
+        $this->schema();
+
+        $handle = fopen('php://temp', 'w+');
+        self::assertNotFalse($handle);
+        $sink = new CsvErrorSink($handle, new CsvDialect(lineEnding: "\n"));
+
+        $report = $this->import(
+            "name,email\n,orphan@example.test\nBob,bob@example.test\n,another-orphan@example.test\n",
+            errorSink: $sink,
+        );
+
+        rewind($handle);
+        $written = stream_get_contents($handle);
+        fclose($handle);
+
+        self::assertSame(2, $report->errorCount());
+        self::assertSame(
+            "record,message\n"
+            ."2,test.import.error.missing_name\n"
+            ."4,test.import.error.missing_name\n",
+            $written,
+        );
+    }
+
+    /**
      * ⚠️ Validation before persist, so a bad value reaches the report instead of blowing up a
      * mid-batch flush — "validation by the validator, never by the database".
      */
@@ -423,6 +457,7 @@ final class ImportRunnerTest extends AbstractFunctionalTestCase
         bool $atomic = true,
         ?RowMapperInterface $mapper = null,
         ?EmailDuplicateResolver $resolver = null,
+        ?ErrorSinkInterface $errorSink = null,
     ): ImportReport {
         $spec = new ImportSpec(
             $this->file($csv),
@@ -434,7 +469,7 @@ final class ImportRunnerTest extends AbstractFunctionalTestCase
             atomic: $atomic,
         );
 
-        return $this->runner()->run($spec, $mapper ?? new CustomerRowMapper(), new CsvReader(), $resolver);
+        return $this->runner()->run($spec, $mapper ?? new CustomerRowMapper(), new CsvReader(), $resolver, $errorSink);
     }
 
     private function runner(): ImportRunner
