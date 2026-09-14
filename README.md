@@ -876,15 +876,32 @@ are the application's.
 ⚠️ **The controller reads only `id` from the save response.** Anything else you return is dead
 payload.
 
-⚠️ **No CSRF token is sent, and you should know it before you mount these routes.** The three POST
-endpoints carry no token today. `run` and `export` leak nothing across origins — a cross-site POST
-cannot read a JSON body or a download — so what is actually exposed is `save`: a forged request can
-create a report in the victim's account, or overwrite one by guessing a sequential id. That is a
-nuisance rather than a disclosure, which is why it has not held up a release; it is written here so
-that nobody assumes a protection that is not there. Until the bundle carries a token the way
-`datatable-bundle` does (the application names the token id, the shipped controller sends it), an
-application whose policy requires one should not mount `save_url` — the other four endpoints are
-usable without it.
+⚠️ **`save` carries a CSRF token; `run` and `export` do not need one.** They leak nothing across
+origins — a cross-site POST cannot read a JSON body or a download — so what a forged request could
+actually abuse is `save`: create a report in the victim's account, or overwrite one by guessing a
+sequential id. The shipped partial mints the token itself, via the `dataflow_csrf_token()` Twig
+function, into `data-{{ stimulus }}-save-csrf-value`; the shipped Stimulus controller reads that
+attribute and posts it back as `_dataflow_csrf_token`. There is nothing to wire on your side beyond
+having `symfony/security-csrf` installed and configured — without it, `dataflow_csrf_token()` mints
+an empty string and `ReportBuilderCsrfChecker::isValid()` accepts every request, the same trade
+`datatable-bundle`'s own preferences endpoint makes.
+
+Your controller has to check it — the bundle validates nothing on its own, since it ships no
+routes, only Twig partials and a Stimulus controller:
+
+```php
+public function save(Request $request, ReportBuilderCsrfChecker $csrf): JsonResponse
+{
+    if (!$csrf->isValid($request)) {
+        throw new AccessDeniedHttpException('invalid_csrf_token');
+    }
+    // …
+}
+```
+
+`dataflow.csrf_token_id` (default `dataflow_report_builder`) names the token id both sides validate
+against. An application that already mints a token under another id for this screen can point the
+bundle at it instead of minting a second one.
 
 ### 4. Wire the busy state, if you have an overlay
 
