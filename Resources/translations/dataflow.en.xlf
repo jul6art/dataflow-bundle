@@ -258,6 +258,10 @@
                 <source>dataflow.import.result.imported</source>
                 <target>%count% row(s) imported</target>
             </trans-unit>
+            <trans-unit id="dataflow.import.result.updated" resname="dataflow.import.result.updated">
+                <source>dataflow.import.result.updated</source>
+                <target>%count% row(s) updated</target>
+            </trans-unit>
             <trans-unit id="dataflow.import.result.skipped" resname="dataflow.import.result.skipped">
                 <source>dataflow.import.result.skipped</source>
                 <target>%count% row(s) skipped</target>

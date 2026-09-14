@@ -14,6 +14,10 @@ use Jul6Art\DataflowBundle\Tests\Fixtures\Entity\Customer;
  * The held `$account` is deliberate: it stands for the tenant a controller passes in, and it is the
  * thing `EntityManager::clear()` would detach behind the mapper's back. Holding it across every
  * batch is what the runner's choice of `detach()` makes safe.
+ *
+ * ⚠️ **When `$existing` is given, it mutates and returns THAT object — never `new Customer()`.**
+ * `account` is left untouched on an update: the row that created this customer already set the
+ * tenant, and a file re-importing the same rows for a name change has no business reassigning it.
  */
 final readonly class CustomerRowMapper implements RowMapperInterface
 {
@@ -35,10 +39,13 @@ final readonly class CustomerRowMapper implements RowMapperInterface
             throw new \DomainException('test.import.error.missing_name');
         }
 
-        $customer = new Customer();
+        $customer = $existing instanceof Customer ? $existing : new Customer();
         $customer->name = $row['name'];
         $customer->email = $row['email'] ?? null;
-        $customer->account = $this->account;
+
+        if (null === $existing) {
+            $customer->account = $this->account;
+        }
 
         return $customer;
     }

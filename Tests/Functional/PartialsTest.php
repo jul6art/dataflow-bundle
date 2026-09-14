@@ -211,6 +211,11 @@ final class PartialsTest extends AbstractFunctionalTestCase
     {
         $report = new ImportReport();
         $report->recordImported();
+        // ⚠️ Sans cet appel, le panneau « updated » — conditionnel, il ne s'affiche que si
+        // `report.updated > 0` — ne serait JAMAIS rendu par ce test, et une clef de traduction
+        // manquante pour lui passerait inaperçue : exactement le défaut que ce fichier existe pour
+        // attraper.
+        $report->recordUpdated();
         $report->recordSkipped();
 
         for ($i = 1; $i <= 320; ++$i) {

@@ -168,6 +168,64 @@ final class ImportRunnerTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ **The row LANDS ON THE SAME record, not a second one.** The one query duplicate detection
+     * already relies on is what tells the runner which record to hand the mapper — this test is
+     * what proves the runner actually uses it instead of quietly falling back to creating a row,
+     * which would leave the database with two customers sharing one email the moment the unique
+     * constraint isn't there to stop it.
+     */
+    public function testTheUpdatePolicyAppliesTheRowOntoTheExistingRecord(): void
+    {
+        $this->schema();
+        $this->seedCustomer('ada@example.test');
+
+        $report = $this->import(
+            "name,email\nAda Lovelace,ada@example.test\n",
+            onDuplicate: DuplicatePolicy::Update,
+            resolver: new EmailDuplicateResolver($this->manager()),
+        );
+
+        self::assertSame(0, $report->imported(), 'Nothing new was created.');
+        self::assertSame(1, $report->updated());
+        self::assertSame(0, $report->skipped());
+        self::assertSame(['Ada Lovelace'], $this->freshManagerNames(), 'One row in the table, renamed — not two.');
+    }
+
+    /**
+     * ⚠️ Upsert is duplicate handling with one more branch, not a second import engine: a row with
+     * no match is still CREATED, exactly as it would be under `Skip` or `Fail`.
+     */
+    public function testANewRowUnderTheUpdatePolicyIsStillCreated(): void
+    {
+        $this->schema();
+
+        $report = $this->import(
+            "name,email\nBob,bob@example.test\n",
+            onDuplicate: DuplicatePolicy::Update,
+            resolver: new EmailDuplicateResolver($this->manager()),
+        );
+
+        self::assertSame(1, $report->imported());
+        self::assertSame(0, $report->updated());
+        self::assertSame(['Bob'], $this->storedNames());
+    }
+
+    /**
+     * ⚠️ **Refused loudly, before a single row is read** — an `Update` policy with no resolver
+     * would leave `$existing` `null` for every row, indistinguishable from every row being new. A
+     * policy that silently behaves like `Skip` with nothing ever skipped is exactly the
+     * half-feature `DuplicatePolicy`'s own history warns against shipping.
+     */
+    public function testTheUpdatePolicyRequiresAResolver(): void
+    {
+        $this->schema();
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->import("name,email\nAda,ada@example.test\n", onDuplicate: DuplicatePolicy::Update);
+    }
+
+    /**
      * ⚠️ A refused row is a report entry, not the end of the import. The record number is what the
      * operator uses to find the line, so it is asserted rather than merely present.
      */

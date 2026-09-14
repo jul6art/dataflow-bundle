@@ -33,9 +33,16 @@ namespace Jul6Art\DataflowBundle\Import;
  * up — or take `EntityManagerInterface::getReference()`, which costs no query and returns a fresh
  * proxy each time.
  *
- * ⚠️ **`$existing` is always null today.** It is in the signature now because upsert is a planned
- * lot, and adding a parameter to a published interface is a breaking change for every
- * implementation — whereas accepting one that is not yet passed costs an unused argument.
+ * ⚠️ **`$existing` is non-null exactly when {@see \Jul6Art\DataflowBundle\Import\Spec\DuplicatePolicy::Update}
+ * is the run's policy AND a resolver found a match for this row.** Every other combination —
+ * `Skip`, `Fail`, or no resolver at all — never calls `map()` for a duplicate row in the first
+ * place, so `$existing` stays `null` for every implementation that does not opt into upsert.
+ *
+ * ⚠️ **When it is not null, you MUST mutate and return THAT SAME object — never construct a new
+ * one.** The runner never calls `persist()` on a row resolved this way, because the object
+ * `findExisting()` returned is already managed by Doctrine and `flush()` picks up changes to it on
+ * its own. Returning a different object silently DISCARDS the row: nothing persists it, and
+ * nothing tells you so.
  */
 interface RowMapperInterface
 {

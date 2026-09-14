@@ -11,19 +11,39 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(ImportReport::class)]
 final class ImportReportTest extends TestCase
 {
-    public function testTheThreeCountersAreDisjointAndSumToTheTotal(): void
+    public function testTheFourCountersAreDisjointAndSumToTheTotal(): void
     {
         $report = new ImportReport();
 
         $report->recordImported();
         $report->recordImported();
+        $report->recordUpdated();
         $report->recordSkipped();
         $report->recordError(7, 'dataflow.import.error.duplicate');
 
         self::assertSame(2, $report->imported());
+        self::assertSame(1, $report->updated());
         self::assertSame(1, $report->skipped());
         self::assertSame(1, $report->errorCount());
-        self::assertSame(4, $report->total());
+        self::assertSame(5, $report->total());
+    }
+
+    /**
+     * ⚠️ `updated()` is its own counter, never folded into `imported()` — the two answer different
+     * questions for an operator reading an upsert's result: how many accounts are new, against how
+     * many already existed and changed. A report where every match still counted as "imported"
+     * would make that number ambiguous the one time it matters.
+     */
+    public function testUpdatedIsZeroByDefaultAndNeverConflatedWithImported(): void
+    {
+        $report = new ImportReport();
+
+        self::assertSame(0, $report->updated());
+
+        $report->recordImported();
+
+        self::assertSame(1, $report->imported());
+        self::assertSame(0, $report->updated(), 'A creation must never bump the update counter.');
     }
 
     /**

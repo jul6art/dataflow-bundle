@@ -35,6 +35,15 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * ⚠️ **It wraps the run in a transaction unless told otherwise.** A batched import is not atomic by
  * nature; a failure on batch 40 used to leave batches 1 to 39 committed with no record of which.
  *
+ * ## Upsert reuses the same duplicate lookup, on purpose
+ *
+ * ⚠️ **`DuplicatePolicy::Update` still asks the SAME resolver, in the SAME one-query-per-batch
+ * call.** What changes is what happens once a match is found: the row goes to the mapper WITH the
+ * match instead of being counted and dropped, and the runner does not `persist()` what comes back
+ * — the record `findExisting()` returned is already managed, and `flush()` sees changes to a
+ * managed object on its own. A row with no match is still created exactly as under `Skip` or
+ * `Fail`: upsert is duplicate handling with one more branch, not a second import engine.
+ *
  * ## What it deliberately does not do
  *
  * No rate limiting, no audit entry, no permission check, no tenant scoping. Each of those is a
@@ -59,6 +68,13 @@ final readonly class ImportRunner
         TabularReaderInterface $reader,
         ?DuplicateResolverInterface $duplicates = null,
     ): ImportReport {
+        // ⚠️ Refused here, loudly, rather than run: with no resolver `$existing` is always `null`,
+        // which is indistinguishable from every row being new — an `Update` policy that updates
+        // nothing is exactly the half-feature this enum's own history warns against shipping.
+        if (DuplicatePolicy::Update === $spec->onDuplicate && null === $duplicates) {
+            throw new \InvalidArgumentException('DuplicatePolicy::Update requires a duplicate resolver; none was given.');
+        }
+
         $report = new ImportReport($spec->dryRun);
 
         // A dry run writes nothing, so there is nothing to wrap and nothing to roll back.
@@ -181,14 +197,16 @@ final readonly class ImportRunner
         $persisted = [];
 
         foreach ($batch as $index => $entry) {
-            if (isset($existing[$index])) {
+            $match = $existing[$index] ?? null;
+
+            if (null !== $match && DuplicatePolicy::Update !== $spec->onDuplicate) {
                 $this->countDuplicate($spec, $report, $entry['record']);
 
                 continue;
             }
 
             try {
-                $entity = $mapper->map($entry['row']);
+                $entity = $mapper->map($entry['row'], $match);
             } catch (\DomainException $refusal) {
                 $report->recordError($entry['record'], $refusal->getMessage());
 
@@ -203,13 +221,20 @@ final readonly class ImportRunner
                 continue;
             }
 
-            $report->recordImported();
+            null !== $match ? $report->recordUpdated() : $report->recordImported();
 
             if ($spec->dryRun) {
                 continue;
             }
 
-            $this->entityManager->persist($entity);
+            // ⚠️ Never `persist()` a match: it is already managed, and doing so anyway would be
+            // harmless on its own but would blur the one thing that tells a reader whether this
+            // branch created a row or mutated one — the very distinction `recordUpdated()` exists
+            // to keep visible in the report.
+            if (null === $match) {
+                $this->entityManager->persist($entity);
+            }
+
             $persisted[] = $entity;
         }
 

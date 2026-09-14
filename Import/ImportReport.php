@@ -20,15 +20,23 @@ namespace Jul6Art\DataflowBundle\Import;
  *
  * ## The counters are disjoint, on purpose
  *
- * A row is imported, or skipped, or in error. `total()` is their sum and equals the number of data
- * records read. A row counted twice is how an import report comes to say more rows than the file
- * has, and the operator stops trusting all of it.
+ * A row is imported, or updated, or skipped, or in error. `total()` is their sum and equals the
+ * number of data records read. A row counted twice is how an import report comes to say more rows
+ * than the file has, and the operator stops trusting all of it.
+ *
+ * ⚠️ **`updated()` is always zero unless the run's policy is
+ * {@see \Jul6Art\DataflowBundle\Import\Spec\DuplicatePolicy::Update}.** It exists as its own
+ * counter, not folded into `imported()`, because the two answer different questions for an
+ * operator reading the result of an upsert: how many accounts are new, against how many already
+ * existed and changed. Conflating them would make "200 imported" ambiguous the one time it matters.
  */
 final class ImportReport
 {
     public const int MAX_RETAINED_ERRORS = 100;
 
     private int $imported = 0;
+
+    private int $updated = 0;
 
     private int $skipped = 0;
 
@@ -45,6 +53,11 @@ final class ImportReport
     public function recordImported(): void
     {
         ++$this->imported;
+    }
+
+    public function recordUpdated(): void
+    {
+        ++$this->updated;
     }
 
     public function recordSkipped(): void
@@ -82,6 +95,15 @@ final class ImportReport
         return $this->imported;
     }
 
+    /**
+     * Rows that matched an existing record and were applied onto it — or would have been, outside
+     * a dry run. Zero for any run whose policy is not `DuplicatePolicy::Update`.
+     */
+    public function updated(): int
+    {
+        return $this->updated;
+    }
+
     public function skipped(): int
     {
         return $this->skipped;
@@ -112,6 +134,6 @@ final class ImportReport
 
     public function total(): int
     {
-        return $this->imported + $this->skipped + $this->errorCount;
+        return $this->imported + $this->updated + $this->skipped + $this->errorCount;
     }
 }

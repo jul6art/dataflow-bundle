@@ -19,6 +19,11 @@
     not. Deriving the domain from the first segment is exact for the first two, and harmless for the
     third: an unknown domain makes the translator return the string unchanged, which is what a
     rendered message wants anyway.
+
+    ⚠️ **The « updated » panel only appears when `report.updated` is greater than zero.** It is
+    always zero for a run whose policy is not `DuplicatePolicy::Update`, and a fourth panel reading
+    "0 UPDATED" on every import of every consumer that has never opted into upsert would be noise
+    nobody asked for — a screen changing shape for a feature it never uses.
 #}
 {% if report.isDryRun %}
     <p class="text-sm text-sky-600 dark:text-sky-400 mb-4">
@@ -27,11 +32,17 @@
     </p>
 {% endif %}
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-{{ report.updated > 0 ? '4' : '3' }} gap-4 mb-6">
     <div class="panel p-4">
         <p class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ 'dataflow.import.result.imported'|trans({'%count%': report.imported}, 'dataflow') }}</p>
         <p class="text-2xl font-bold text-emerald-600">{{ report.imported }}</p>
     </div>
+    {% if report.updated > 0 %}
+        <div class="panel p-4">
+            <p class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ 'dataflow.import.result.updated'|trans({'%count%': report.updated}, 'dataflow') }}</p>
+            <p class="text-2xl font-bold text-sky-600">{{ report.updated }}</p>
+        </div>
+    {% endif %}
     <div class="panel p-4">
         <p class="text-xs uppercase text-slate-500 dark:text-slate-400">{{ 'dataflow.import.result.skipped'|trans({'%count%': report.skipped}, 'dataflow') }}</p>
         <p class="text-2xl font-bold text-amber-600">{{ report.skipped }}</p>

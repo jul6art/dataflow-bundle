@@ -439,6 +439,7 @@ $spec = new ImportSpec($path, $inspection->mapping, dryRun: true);
 $report = $runner->run($spec, $mapper, $reader, $resolver);
 
 $report->imported();            // rows that would land — see isDryRun() before wording this
+$report->updated();             // rows that would overwrite an existing record — see onDuplicate below
 $report->skipped();
 $report->errorCount();          // exact
 $report->errors();              // the first 100
@@ -475,6 +476,42 @@ the same.
 ⚠️ **A dry run is not a rollback.** Nothing is persisted, so no trigger fires and no sequence
 advances — and a constraint only the database knows about is not caught. What it does catch is
 every row the mapper or the validator would reject.
+
+### Updating instead of skipping
+
+```php
+use Jul6Art\DataflowBundle\Import\Spec\DuplicatePolicy;
+use Jul6Art\DataflowBundle\Import\Spec\ImportSpec;
+
+$spec = new ImportSpec($path, $inspection->mapping, onDuplicate: DuplicatePolicy::Update);
+$report = $runner->run($spec, $mapper, $reader, $resolver);
+
+$report->updated();   // rows that overwrote an existing record, disjoint from imported()
+```
+
+`DuplicatePolicy` has three cases: `Skip` (the default — count it, move on), `Fail` (turn it into a
+row error, for a file that is supposed to contain only new records), and `Update`.
+
+⚠️ **`Update` requires a resolver.** Without one, the runner has no way to find what a row would
+update, and `$existing` would always be `null` — indistinguishable from every row being new.
+`ImportRunner::run()` refuses the combination with an `\InvalidArgumentException` rather than
+silently behaving like `Skip` with nothing ever skipped: a policy nobody chose, worse than one that
+fails loudly.
+
+⚠️ **Your mapper MUST mutate and return the SAME object it is given, never a new one.** When
+`$existing` is non-null, it is the record `findExisting()` returned — already managed by Doctrine.
+The runner never calls `persist()` on it, so a fresh object handed back in its place is silently
+**discarded**, not saved:
+
+```php
+public function map(array $row, ?object $existing = null): Customer
+{
+    $customer = $existing ?? new Customer();
+    $customer->name = $row['name'];
+
+    return $customer;
+}
+```
 
 ### A spreadsheet uploaded instead of a CSV
 
