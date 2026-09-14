@@ -15,6 +15,30 @@ services:
     Jul6Art\DataflowBundle\Import\HeaderInspector: ~
     Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory: ~
 
+    # ⚠️ Public: a project's own "save" controller fetches it by autowiring the class, exactly like
+    # any other service — public here only because a bundle with `public: false` by default still
+    # has to say so explicitly for the one service meant to be consumed directly rather than
+    # injected as a collaborator of another bundle service.
+    #
+    # `@?` tolerates the absence of `symfony/security-csrf`: the partial could not have minted a
+    # token to check against either, and `isValid()` answers `true` rather than breaking a save
+    # over a package the application deliberately does not have.
+    Jul6Art\DataflowBundle\Security\ReportBuilderCsrfChecker:
+        public: true
+        arguments:
+            $csrfTokenManager: '@?security.csrf.token_manager'
+            $tokenId: '%dataflow.csrf_token_id%'
+
+    # ⚠️ Tagged by hand, not by `#[AsTwigFunction]`'s own autoconfiguration — this file turns
+    # autoconfigure off for every reason the top of it gives, and Twig's attribute discovery is
+    # exactly that: autoconfiguration. Harmless to register without `twig/twig` installed: an
+    # unprocessed tag on a service nothing resolves costs nothing.
+    Jul6Art\DataflowBundle\Twig\DataflowCsrfExtension:
+        arguments:
+            $csrfTokenManager: '@?security.csrf.token_manager'
+            $tokenId: '%dataflow.csrf_token_id%'
+        tags: ['twig.extension']
+
     # ⚠️ Public, unlike everything else here. A consumer's translation guard fetches it from the
     # container in a TEST — `getContainer()->get(DeclaredTranslationKeys::class)` — and a private
     # service answers "has been removed or inlined", a message that reads like a bug in the bundle.

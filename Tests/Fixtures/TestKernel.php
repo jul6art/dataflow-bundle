@@ -137,6 +137,11 @@ final class TestKernel extends Kernel
                     'event_dispatcher',
                     'request_stack',
                     'security.token_storage',
+                    // ⚠️ Only present when `framework.csrf_protection` is configured — a test that
+                    // does not enable it never calls `get()` on this id, so its absence there is
+                    // never observed.
+                    'security.csrf.token_manager',
+                    'session.factory',
                     'validator',
                     'translator',
                     'twig',

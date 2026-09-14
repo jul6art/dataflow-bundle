@@ -51,6 +51,10 @@
      data-{{ stimulus }}-export-url-value="{{ export_url|default('') }}"
      data-{{ stimulus }}-save-url-value="{{ save_url|default('') }}"
      data-{{ stimulus }}-load-url-value="{{ load_url|default('') }}"
+     {#- Only `save` needs a token — see DataflowCsrfExtension's own docblock for why `run` and
+         `export` do not. Empty without symfony/security-csrf configured, which the Stimulus
+         controller already treats as "nothing to send". #}
+     data-{{ stimulus }}-save-csrf-value="{{ dataflow_csrf_token() }}"
      class="space-y-6">
 
     {# The stepper. `.step-tab` and its bullet are styled by assets/styles/dataflow.css; the

@@ -33,6 +33,7 @@ final class ConfigurationTest extends TestCase
         'enabled' => true,
         'translation_domain' => 'dataflow',
         'stimulus_identifier' => 'dataflow--report-builder',
+        'csrf_token_id' => 'dataflow_report_builder',
         'limits' => [
             'report_rows' => 1000,
             'export_rows' => 50000,

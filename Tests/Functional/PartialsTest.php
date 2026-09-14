@@ -7,6 +7,11 @@ namespace Jul6Art\DataflowBundle\Tests\Functional;
 use Jul6Art\DataflowBundle\Import\HeaderInspection;
 use Jul6Art\DataflowBundle\Import\ImportReport;
 use PHPUnit\Framework\Attributes\CoversNothing;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\SessionFactoryInterface;
+use Symfony\Component\Security\Csrf\CsrfToken;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Twig\Environment;
 
 /**
@@ -85,6 +90,80 @@ final class PartialsTest extends AbstractFunctionalTestCase
         );
 
         self::assertStringContainsString('12,345', $html);
+    }
+
+    /**
+     * ⚠️ Without `symfony/security-csrf` CONFIGURED, the builder must still render — a compile
+     * error here would break the whole partial over a package the application deliberately does
+     * not have, exactly the hazard `DataflowCsrfExtension`'s own docblock names.
+     */
+    public function testWithNoCsrfManagerTheSaveAttributeIsEmptyNotAnError(): void
+    {
+        $html = $this->render('@Dataflow/report/_builder.html.twig', [
+            'entities' => [],
+            'fields_url' => '/f',
+            'run_url' => '/r',
+            'export_url' => '/e',
+            'save_url' => '/s',
+            'load_url' => '/l/{id}',
+            'can_share' => false,
+        ]);
+
+        self::assertStringContainsString('save-csrf-value=""', $html);
+    }
+
+    /**
+     * ⚠️ The end-to-end proof: with `symfony/security-csrf` actually configured, the attribute
+     * carries a REAL, validatable token — not merely a non-empty string. A test only checking
+     * "not empty" would still pass if the wiring minted garbage.
+     */
+    public function testWithACsrfManagerTheSaveAttributeCarriesARealToken(): void
+    {
+        $container = $this->boot(withTwig: true, extraConfig: [
+            'framework' => [
+                'csrf_protection' => true,
+                'session' => ['storage_factory_id' => 'session.storage.factory.mock_file', 'handler_id' => null],
+            ],
+        ]);
+
+        $twig = $container->get('twig');
+        self::assertInstanceOf(Environment::class, $twig);
+
+        // ⚠️ `SessionTokenStorage` reads the CURRENT request off the stack and starts a session on
+        // it — neither exists outside a real HTTP request cycle, which a bare `$twig->render()`
+        // call is not. Pushing one is what a real request would already have done by the time this
+        // partial renders.
+        $requestStack = $container->get('request_stack');
+        self::assertInstanceOf(RequestStack::class, $requestStack);
+
+        $sessionFactory = $container->get('session.factory');
+        self::assertInstanceOf(SessionFactoryInterface::class, $sessionFactory);
+
+        $request = Request::create('/');
+        $request->setSession($sessionFactory->createSession());
+        $requestStack->push($request);
+
+        $html = $twig->render('@Dataflow/report/_builder.html.twig', [
+            'entities' => [],
+            'fields_url' => '/f',
+            'run_url' => '/r',
+            'export_url' => '/e',
+            'save_url' => '/s',
+            'load_url' => '/l/{id}',
+            'can_share' => false,
+        ]);
+
+        self::assertMatchesRegularExpression('/save-csrf-value="[^"]+"/', $html);
+
+        preg_match('/save-csrf-value="([^"]+)"/', $html, $matches);
+        $token = $matches[1] ?? '';
+        self::assertNotSame('', $token);
+
+        $csrfTokenManager = $container->get('security.csrf.token_manager');
+        self::assertInstanceOf(CsrfTokenManagerInterface::class, $csrfTokenManager);
+        self::assertTrue($csrfTokenManager->isTokenValid(
+            new CsrfToken('dataflow_report_builder', $token),
+        ));
     }
 
     /**
@@ -252,12 +331,13 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $bundleConfig
+     * @param array<string, mixed>                $context
+     * @param array<string, mixed>                $bundleConfig
+     * @param array<string, array<string, mixed>> $extraConfig
      */
-    private function render(string $template, array $context, array $bundleConfig = []): string
+    private function render(string $template, array $context, array $bundleConfig = [], array $extraConfig = []): string
     {
-        $twig = $this->boot(bundleConfig: $bundleConfig, withTwig: true)->get('twig');
+        $twig = $this->boot(bundleConfig: $bundleConfig, withTwig: true, extraConfig: $extraConfig)->get('twig');
         self::assertInstanceOf(Environment::class, $twig);
 
         return $twig->render($template, $context);

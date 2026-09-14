@@ -164,6 +164,10 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
         // ⚠️ The parameters are already published by `prepend()`; what is left for `load()` is the
         // service argument, which needs the definitions that were just loaded.
         $this->configureLimitsProvider($container, $limits);
+
+        $tokenId = $config['csrf_token_id'] ?? null;
+        \assert(\is_string($tokenId) && '' !== $tokenId, 'Validated non-empty by the configuration tree.');
+        $container->setParameter('dataflow.csrf_token_id', $tokenId);
     }
 
     /**

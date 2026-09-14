@@ -75,6 +75,12 @@ export default class extends Controller {
         runUrl: { type: String, default: '' },
         exportUrl: { type: String, default: '' },
         saveUrl: { type: String, default: '' },
+        // ⚠️ `save` is the one route among the three POSTs a forged cross-origin request can
+        // actually abuse — `run` and `export` leak nothing back to an attacker's page, but `save`
+        // creates or, on a guessed id, OVERWRITES a report in the victim's account. Empty by
+        // default: a project that has not rendered `_csrf.html.twig`'s dataflow counterpart still
+        // gets a working builder, exactly as `datatable-bundle`'s own CSRF value degrades.
+        saveCsrf: { type: String, default: '' },
         // ⚠️ Must contain `{id}`. Without the placeholder every load hits the same URL, which is
         // how the original's regex hack came about.
         loadUrl: { type: String, default: '' },
@@ -798,6 +804,10 @@ export default class extends Controller {
 
         form.append('name', name);
         form.append('shareScope', this._shareScope || 'private');
+
+        if (this.saveCsrfValue) {
+            form.append('_dataflow_csrf_token', this.saveCsrfValue);
+        }
 
         this._busy(this._workArea);
 
