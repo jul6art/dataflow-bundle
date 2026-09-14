@@ -588,6 +588,36 @@ same dialect and through the same `FormulaInjectionGuard` a `TabularWriterInterf
 finished. The handle is yours to open and close — a sink that owned its own temporary file would
 still have to hand it back for the download that follows.
 
+### A template file, so the mapping screen is optional
+
+```php
+use Jul6Art\DataflowBundle\Import\TemplateBuilder;
+use Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory;
+
+$builder = new TemplateBuilder();
+
+return $this->responses->stream(
+    $writer,
+    $builder->header($mapper),
+    $builder->rows($mapper),
+    TabularResponseFactory::basename(['template', 'customers']),
+);
+```
+
+The columns are exactly `RowMapperInterface::fields()`, in the same order a mapping screen would
+offer them — a user who fills in the template lands on the same columns as a user who fills in a
+blank screen. One example row is included, filled in wherever the mapper has something to say.
+
+⚠️ **A field with a closed set of accepted values names them in its OWN HEADER TEXT** —
+`status (active/inactive)` — rather than a second sheet, a cell comment, or a dropdown: OpenSpout
+exposes neither of the last two, and a header a user can read in a text editor, in Excel, or in any
+other spreadsheet app is a plainer answer than a mechanism two of this bundle's three consumers
+could not render anyway.
+
+For a mapper that implements only `RowMapperInterface`, `header()` and `rows()` still return
+something usable — the columns, and one blank row. Implement `TemplatableRowMapperInterface` to add
+the example values and the enumerations; nothing else about the mapper changes.
+
 ### A spreadsheet uploaded instead of a CSV
 
 `CsvReader` refuses a binary workbook by name — `dataflow.import.error.binary_spreadsheet` —
