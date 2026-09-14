@@ -226,6 +226,13 @@ final class TestKernel extends Kernel
             ->register(TaggedWriters::class, TaggedWriters::class)
             ->setArguments([new TaggedIteratorArgument('dataflow.tabular_writer')])
             ->setPublic(true);
+
+        // Its mirror for the reader tag — see TaggedReaders for why this only earns its place once
+        // a second reader exists.
+        $container
+            ->register(TaggedReaders::class, TaggedReaders::class)
+            ->setArguments([new TaggedIteratorArgument('dataflow.tabular_reader')])
+            ->setPublic(true);
     }
 
     /**

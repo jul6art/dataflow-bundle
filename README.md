@@ -401,6 +401,50 @@ A reader carries its dialect in its constructor, exactly as a writer does, and y
 record can span several lines of the file. A blank line yields nothing and still consumes its
 number, so every later number keeps pointing at the right row.
 
+### A real spreadsheet, and choosing a reader by content
+
+```php
+use Jul6Art\DataflowBundle\Io\Reader\XlsxReader;
+
+$reader = new XlsxReader();
+
+foreach ($reader->read($path) as $record => $cells) {
+    // Same contract as CsvReader: 1-based, header included, every cell a string.
+}
+```
+
+`XlsxReader` reads a real `.xlsx`, through OpenSpout, with the same `list<string>` contract as
+`CsvReader` — a date comes back as the text Excel would show, a boolean as `'1'` or `'0'`, never as
+a `DateTimeInterface` or a native `bool` a mapper written for CSV would not expect.
+
+An upload's format is not known in advance, so it is resolved the same way a writer is resolved by
+`code()` — a tagged iterator, checked with `supports()` instead:
+
+```php
+public function __construct(
+    #[AutowireIterator(tag: 'dataflow.tabular_reader')]
+    private readonly iterable $readers,
+) {}
+
+private function readerFor(string $filePath): TabularReaderInterface
+{
+    foreach ($this->readers as $reader) {
+        if ($reader->supports($filePath)) {
+            return $reader;
+        }
+    }
+
+    throw UnreadableFileException::cannotOpen($filePath);
+}
+```
+
+⚠️ **`supports()` is answered from the CONTENT.** `XlsxReader`'s is narrower than the binary-container
+question `SpreadsheetSignature` answers for CSV: it opens the ZIP and looks for `xl/workbook.xml`,
+so a `.docx` or an `.ods` — a ZIP, but not this format — is refused by name instead of being
+half-read. An old binary `.xls` (OLE2, not a ZIP at all) is refused by BOTH readers, which is D-14's
+guard doing exactly what it always did: naming the refusal instead of importing zero rows in
+silence.
+
 ### The mapping screen
 
 ```php

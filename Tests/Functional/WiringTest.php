@@ -8,7 +8,10 @@ use Jul6Art\DataflowBundle\Import\HeaderInspector;
 use Jul6Art\DataflowBundle\Import\ImportRunner;
 use Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory;
 use Jul6Art\DataflowBundle\Io\Reader\CsvReader;
+use Jul6Art\DataflowBundle\Io\Reader\TabularReaderInterface;
+use Jul6Art\DataflowBundle\Io\Reader\XlsxReader;
 use Jul6Art\DataflowBundle\Io\TabularWriterInterface;
+use Jul6Art\DataflowBundle\Io\Writer\XlsxWriter;
 use Jul6Art\DataflowBundle\Port\ConfiguredLimitsProvider;
 use Jul6Art\DataflowBundle\Port\ExportAuditorInterface;
 use Jul6Art\DataflowBundle\Port\LimitsProviderInterface;
@@ -18,6 +21,7 @@ use Jul6Art\DataflowBundle\Report\Catalog\EntityCatalog;
 use Jul6Art\DataflowBundle\Report\Catalog\FieldCatalog;
 use Jul6Art\DataflowBundle\Report\ReportRunner;
 use Jul6Art\DataflowBundle\Report\Spec\ReportSpecInterpreter;
+use Jul6Art\DataflowBundle\Tests\Fixtures\TaggedReaders;
 use Jul6Art\DataflowBundle\Tests\Fixtures\TaggedWriters;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use Twig\Environment;
@@ -64,6 +68,63 @@ final class WiringTest extends AbstractFunctionalTestCase
         sort($codes);
 
         self::assertSame(['csv', 'json', 'xlsx'], $codes);
+    }
+
+    /**
+     * ⚠️ The property lot 2.1 actually delivers: a caller does not know in advance whether an
+     * upload is a CSV or a workbook, so it cannot pick a reader by `code()` the way it picks a
+     * writer. Iterating the tag and asking each `supports()` in turn is the whole mechanism — this
+     * test is what proves it is wired, not just documented.
+     */
+    public function testAFileIsResolvedToItsReaderByContentNotByExtension(): void
+    {
+        $container = $this->boot();
+        $readers = $container->get(TaggedReaders::class);
+        self::assertInstanceOf(TaggedReaders::class, $readers);
+
+        $byCode = [];
+        foreach ($readers->readers as $reader) {
+            $byCode[$reader->code()] = $reader;
+        }
+
+        self::assertArrayHasKey('csv', $byCode);
+        self::assertArrayHasKey('xlsx', $byCode);
+
+        $csvPath = tempnam(sys_get_temp_dir(), 'dataflow-wiring-');
+        self::assertNotFalse($csvPath);
+        file_put_contents($csvPath, "a,b\n1,2\n");
+
+        $resolved = self::resolve($byCode, $csvPath);
+        self::assertInstanceOf(CsvReader::class, $resolved);
+
+        unlink($csvPath);
+
+        $xlsxPath = tempnam(sys_get_temp_dir(), 'dataflow-wiring-');
+        self::assertNotFalse($xlsxPath);
+        $out = '';
+        new XlsxWriter()->write(['a'], [['1']], static function (string $chunk) use (&$out): void {
+            $out .= $chunk;
+        });
+        file_put_contents($xlsxPath, $out);
+
+        $resolved = self::resolve($byCode, $xlsxPath);
+        self::assertInstanceOf(XlsxReader::class, $resolved);
+
+        unlink($xlsxPath);
+    }
+
+    /**
+     * @param array<string, TabularReaderInterface> $byCode
+     */
+    private static function resolve(array $byCode, string $filePath): TabularReaderInterface
+    {
+        foreach ($byCode as $reader) {
+            if ($reader->supports($filePath)) {
+                return $reader;
+            }
+        }
+
+        self::fail('No tagged reader supports this file.');
     }
 
     /**

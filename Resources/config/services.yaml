@@ -43,6 +43,9 @@ services:
     Jul6Art\DataflowBundle\Io\Reader\CsvReader:
         tags: ['dataflow.tabular_reader']
 
+    Jul6Art\DataflowBundle\Io\Reader\XlsxReader:
+        tags: ['dataflow.tabular_reader']
+
     # ---------------------------------------------------------------- ports, with their defaults
     #
     # An application replaces one by binding the INTERFACE to its own service; the concrete default
