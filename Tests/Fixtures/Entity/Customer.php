@@ -30,4 +30,17 @@ class Customer
 
     #[ORM\ManyToOne(targetEntity: Account::class)]
     public ?Account $account = null;
+
+    /**
+     * ⚠️ An EMBEDDED value object, not a relation — the shape the runner used to mis-resolve.
+     * Its dotted path (`billingAddress.city`) is indistinguishable from a relation path at a
+     * glance, and that is the whole point of having it here.
+     */
+    #[ORM\Embedded(class: Address::class)]
+    public Address $billingAddress;
+
+    public function __construct()
+    {
+        $this->billingAddress = new Address();
+    }
 }

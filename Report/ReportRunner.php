@@ -170,6 +170,23 @@ final readonly class ReportRunner
     /**
      * Resolves `customer.account.label` to `a2.label`, creating each join once.
      *
+     * ## Not every dotted segment is a relation
+     *
+     * ⚠️ **An `#[ORM\Embedded]` value object is projected, never joined.** Doctrine flattens it
+     * onto its owner's table, so `root.billingAddress.postalCode` is a valid field path as it
+     * stands — while joining it raises, at DQL parse time, « has no association named
+     * billingAddress ». Both shapes look identical in a path: `customer.name` crosses a relation,
+     * `billingAddress.city` does not, and only the class metadata can tell them apart.
+     *
+     * ⚠️ This broke a SHIPPED feature in the three consuming applications: a free report builder
+     * takes its column palette from {@see FieldCatalog::listFor()}, which lists an embeddable's
+     * sub-fields as ordinary scalars — so nothing stopped a user picking one, and the report
+     * answered 500. Reported on cereezer 2026-09-14.
+     *
+     * ⚠️ The metadata is asked about the REMAINING path, not about the segment: `hasField()`
+     * understands `billingAddress.postalCode` as one field, which is exactly the question worth
+     * asking. Testing the segment alone would answer `false` and change nothing.
+     *
      * @param array<string, string> $joins mutated: gains every alias it creates
      */
     private function resolve(QueryBuilder $qb, string $path, array &$joins, int &$aliases): string
@@ -178,12 +195,23 @@ final readonly class ReportRunner
         $scalar = \array_pop($parts);
         $alias = 'root';
         $cumulative = '';
+        $class = $qb->getRootEntities()[0] ?? null;
 
-        foreach ($parts as $relation) {
+        foreach ($parts as $index => $relation) {
+            // ⚠️ The embedded case, checked BEFORE assuming a relation: what remains of the path
+            // from here is a single field of the CURRENT class, so it projects directly and no
+            // join — nor any further segment — has to be resolved.
+            $remaining = \implode('.', \array_slice($parts, $index));
+
+            if (null !== $class && $this->isField($class, $remaining.'.'.$scalar)) {
+                return $alias.'.'.$remaining.'.'.$scalar;
+            }
+
             $cumulative = '' === $cumulative ? $relation : $cumulative.'.'.$relation;
 
             if (isset($joins[$cumulative])) {
                 $alias = $joins[$cumulative];
+                $class = $this->targetOf($class, $relation);
 
                 continue;
             }
@@ -194,9 +222,53 @@ final readonly class ReportRunner
             // null, so adding an optional column to a report would silently shrink it.
             $qb->leftJoin($alias.'.'.$relation, $joins[$cumulative]);
             $alias = $joins[$cumulative];
+            $class = $this->targetOf($class, $relation);
         }
 
         return $alias.'.'.$scalar;
+    }
+
+    /**
+     * Is `$path` a single field of `$class` — an ordinary column, or an embedded one?
+     *
+     * ⚠️ Doctrine registers an embeddable's columns under their DOTTED name
+     * (`billingAddress.postalCode`), which is why one `hasField()` answers for both shapes.
+     *
+     * @param class-string $class
+     */
+    private function isField(string $class, string $path): bool
+    {
+        try {
+            return $this->entityManager->getClassMetadata($class)->hasField($path);
+        } catch (\Throwable) {
+            // A class the metadata factory does not know is not a reason to fail here: the caller
+            // falls back to the relation branch, which reports the real problem in its own terms.
+            return false;
+        }
+    }
+
+    /**
+     * The class on the far side of `$relation`, or `null` when it cannot be determined.
+     *
+     * @param class-string|null $class
+     *
+     * @return class-string|null
+     */
+    private function targetOf(?string $class, string $relation): ?string
+    {
+        if (null === $class) {
+            return null;
+        }
+
+        try {
+            $metadata = $this->entityManager->getClassMetadata($class);
+
+            return $metadata->hasAssociation($relation)
+                ? $metadata->getAssociationTargetClass($relation)
+                : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function applyFilter(QueryBuilder $qb, string $expression, ReportFilter $filter, int &$parameters, ?string $fieldType): void

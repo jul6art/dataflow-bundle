@@ -62,6 +62,83 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * An EMBEDDED value object projects directly — it is not a relation to join.
+     *
+     * ## The defect this replaces
+     *
+     * ⚠️ `resolve()` treated every dotted segment but the last as an association and emitted a
+     * `leftJoin`. That is right for `customer.account.label` and **wrong for an embedded value
+     * object**: Doctrine flattens it onto the owner's table, so `root.billingAddress.postalCode`
+     * projects as it stands. Joining it raised, at DQL parse time:
+     *
+     * ```
+     * [Semantical Error] Class …\Customer has no association named billingAddress
+     * ```
+     *
+     * ⚠️ **It broke a shipped feature, in production, in all three consuming applications** — the
+     * free report builder takes its column palette straight from `FieldCatalog::listFor()`, which
+     * lists an embeddable's sub-fields as ordinary scalars. Nothing stopped a user from picking
+     * one, and nothing filtered it before execution: the report answered 500. Reported on
+     * cereezer 2026-09-14 (`billingAddress.postalCode`, `billingAddress.countryCode`), fixed here
+     * rather than worked around one application at a time.
+     *
+     * ⚠️ The fixture had to gain an embeddable for this test to exist at all — the bundle could
+     * only ever be tested against real relations before, which is exactly how the defect survived.
+     */
+    public function testAnEmbeddedValueObjectIsProjectedRatherThanJoined(): void
+    {
+        $this->seed(2);
+
+        $entityManager = $this->entityManager();
+
+        /** @var list<Customer> $customers */
+        $customers = $entityManager->getRepository(Customer::class)->findBy([], ['id' => 'ASC']);
+        $customers[0]->billingAddress->postalCode = 'L-1234';
+        $customers[0]->billingAddress->city = 'Luxembourg';
+        $customers[1]->billingAddress->postalCode = 'B-1000';
+        $customers[1]->billingAddress->city = 'Bruxelles';
+        $entityManager->flush();
+
+        $spec = new ReportSpec(Customer::class, [
+            new ReportColumn('name', 'Nom'),
+            new ReportColumn('billingAddress.postalCode', 'Code postal'),
+            new ReportColumn('billingAddress.city', 'Ville'),
+        ]);
+
+        $result = $this->customerRunner()->run($spec, $this->actor());
+
+        self::assertSame(
+            [
+                ['name' => 'Client 1', 'billingAddress.postalCode' => 'L-1234', 'billingAddress.city' => 'Luxembourg'],
+                ['name' => 'Client 2', 'billingAddress.postalCode' => 'B-1000', 'billingAddress.city' => 'Bruxelles'],
+            ],
+            iterator_to_array($result->rows()),
+        );
+    }
+
+    /**
+     * A real relation still joins — the fix must not trade one defect for its mirror.
+     *
+     * ⚠️ Without this case, `resolve()` could be "fixed" by never joining at all: every report
+     * crossing a relation would then fail, and the test above would stay green. The miroir is part
+     * of the test, not a courtesy.
+     */
+    public function testARealRelationIsStillJoined(): void
+    {
+        $this->seed(2);
+
+        $result = $this->runner()->run($this->spec(), $this->actor());
+
+        self::assertSame(
+            [
+                ['number' => 'INV-1', 'customer.name' => 'Client 1'],
+                ['number' => 'INV-2', 'customer.name' => 'Client 2'],
+            ],
+            iterator_to_array($result->rows()),
+        );
+    }
+
+    /**
      * The property the whole layer exists for, asserted by MEASUREMENT.
      *
      * ⚠️ A first version of this test asserted `assertInstanceOf(\Generator::class, …)` plus an
@@ -420,6 +497,30 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
             new ReportColumn('number', 'Number'),
             new ReportColumn('customer.name', 'Customer'),
         ]);
+    }
+
+    /**
+     * The same runner, with `Customer` as the catalogued root — the embeddable lives there.
+     */
+    private function customerRunner(): ReportRunner
+    {
+        $permissions = self::createStub(PermissionDecisionService::class);
+        $permissions->method('isGranted')->willReturn(true);
+
+        $entities = new EntityCatalog($permissions, null, [
+            new class implements ReportableEntityProviderInterface {
+                public function entities(): array
+                {
+                    return [Customer::class => new ReportableEntity('customer', 'customer:read')];
+                }
+            },
+        ]);
+
+        return new ReportRunner(
+            $this->entityManager(),
+            $entities,
+            new FieldCatalog($this->entityManager(), $entities),
+        );
     }
 
     /**
