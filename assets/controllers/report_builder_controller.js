@@ -290,10 +290,40 @@ export default class extends Controller {
         this._renderStep();
     }
 
+    /**
+     * ⚠️ **Changing the entity CLEARS the columns and the filters, and that is not tidiness.** They
+     * describe the previous entity: a filter on `startDate` surviving a switch to an entity without
+     * that field was posted as-is, the server refused it, and the screen said « the preview could
+     * not be built » with nothing on it to suggest that an invisible filter inherited from the
+     * previous entity was the cause.
+     *
+     * ⚠️ Re-clicking the entity ALREADY chosen clears nothing: without that guard, a click on the
+     * current radio would throw away a half-composed report.
+     *
+     * ⚠️ This does not touch loading a saved report: `_applyDefinition()` ticks the radio without
+     * emitting a `change` event, so it never comes through here.
+     */
     async entityChanged(event) {
-        this._entity = event.target.value;
+        const chosen = event.target.value;
+
+        if (chosen === this._entity) {
+            return;
+        }
+
+        this._entity = chosen;
+        this._columns = [];
+        this._filters = [];
+        this._renderFilters();
+
+        if (this.hasPreviewPanelTarget) {
+            // The preview on screen belongs to the previous entity too.
+            this.previewPanelTarget.hidden = true;
+        }
 
         if (!this._entity) {
+            this._renderColumns();
+            this._renderSelectedColumns();
+
             return;
         }
 
