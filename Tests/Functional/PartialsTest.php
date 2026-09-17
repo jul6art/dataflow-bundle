@@ -93,6 +93,45 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ The two selects of a filter row become select2 widgets, and the identifier that makes it
+     * happen is the APPLICATION's. The bundle cannot know it: it is derived from where the consumer
+     * put the controller file. Defaulted to what the three applications of this ecosystem produce.
+     */
+    public function testTheBuilderPublishesTheApplicationsSelect2Identifier(): void
+    {
+        $html = $this->render('@Dataflow/report/_builder.html.twig', self::context());
+
+        self::assertStringContainsString('select2-identifier-value="ui--select2"', $html);
+    }
+
+    public function testTheSelect2IdentifierIsConfigurable(): void
+    {
+        $html = $this->render(
+            '@Dataflow/report/_builder.html.twig',
+            self::context(),
+            ['select2_identifier' => 'widgets--picker'],
+        );
+
+        self::assertStringContainsString('select2-identifier-value="widgets--picker"', $html);
+    }
+
+    /**
+     * ⚠️ An EMPTY identifier is a consumer saying "plain selects, thank you", and it must render a
+     * complete screen rather than a broken one — a field picker listing forty paths is usable
+     * unstyled. Empty is also what the controller reads as "do nothing", so the two ends agree.
+     */
+    public function testAnEmptySelect2IdentifierLeavesPlainSelects(): void
+    {
+        $html = $this->render(
+            '@Dataflow/report/_builder.html.twig',
+            self::context(),
+            ['select2_identifier' => ''],
+        );
+
+        self::assertStringContainsString('select2-identifier-value=""', $html);
+    }
+
+    /**
      * ⚠️ Without `symfony/security-csrf` CONFIGURED, the builder must still render — a compile
      * error here would break the whole partial over a package the application deliberately does
      * not have, exactly the hazard `DataflowCsrfExtension`'s own docblock names.
@@ -328,6 +367,24 @@ final class PartialsTest extends AbstractFunctionalTestCase
         }
 
         return $report;
+    }
+
+    /**
+     * The minimum a builder needs to render.
+     *
+     * @return array<string, mixed>
+     */
+    private static function context(): array
+    {
+        return [
+            'entities' => [],
+            'fields_url' => '/f',
+            'run_url' => '/r',
+            'export_url' => '/e',
+            'save_url' => '/s',
+            'load_url' => '/l/{id}',
+            'can_share' => false,
+        ];
     }
 
     /**

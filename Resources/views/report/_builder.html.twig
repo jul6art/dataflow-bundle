@@ -36,6 +36,12 @@
     "false" everywhere, which hides the control on every screen and looks like a broken feature.
 #}
 {% set stimulus = stimulus|default(dataflow_stimulus|default('dataflow--report-builder')) %}
+{#- ⚠️ `is defined` and NOT `|default`: Twig's `default` filter fires on an EMPTY value too, not
+    only on an undefined one, so `''` — the consumer saying "plain selects, thank you" — came back
+    as `ui--select2` and the opt-out did nothing. The line above can keep `|default` because an
+    empty `stimulus_identifier` is refused by the configuration tree; here empty is a real,
+    supported answer. -#}
+{% set select2 = select2 is defined ? select2 : (dataflow_select2 is defined ? dataflow_select2 : 'ui--select2') %}
 {% set entities = entities|default({}) %}
 {% set can_share = can_share|default(false) %}
 {% set steps = [
@@ -55,6 +61,7 @@
          `export` do not. Empty without symfony/security-csrf configured, which the Stimulus
          controller already treats as "nothing to send". #}
      data-{{ stimulus }}-save-csrf-value="{{ dataflow_csrf_token() }}"
+     data-{{ stimulus }}-select2-identifier-value="{{ select2 }}"
      class="space-y-6">
 
     {# The stepper. `.step-tab` and its bullet are styled by assets/styles/dataflow.css; the

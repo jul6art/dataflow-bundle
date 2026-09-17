@@ -55,7 +55,7 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
      * so a Twig extension class would have to be registered conditionally anyway, and a global is
      * one line the consumer can also override in their own `twig.yaml`.
      */
-    private function exposeTwigGlobals(ContainerBuilder $container, string $stimulus, string $domain, int $exportRowLimit): void
+    private function exposeTwigGlobals(ContainerBuilder $container, string $stimulus, string $select2, string $domain, int $exportRowLimit): void
     {
         if (!$container->hasExtension('twig')) {
             return;
@@ -64,6 +64,7 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
         $container->prependExtensionConfig('twig', [
             'globals' => [
                 'dataflow_stimulus' => $stimulus,
+                'dataflow_select2' => $select2,
                 'dataflow_domain' => $domain,
                 // ⚠️ Read from the SAME configuration this bundle validates a few lines above, not
                 // re-typed — a warning that names a different number than the ceiling `ReportRunner`
@@ -123,6 +124,7 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
 
         $container->setParameter('dataflow.translation_domain', self::domain($config));
         $container->setParameter('dataflow.stimulus_identifier', self::stimulus($config));
+        $container->setParameter('dataflow.select2_identifier', self::select2($config));
 
         // ⚠️ Read back the PARAMETER the loop above just set, not a second look at `$limits` — one
         // validated value, one source of truth for both the parameter another bundle's YAML can
@@ -130,7 +132,7 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
         $exportRowLimit = $container->getParameter('dataflow.limits.export_rows');
         \assert(\is_int($exportRowLimit));
 
-        $this->exposeTwigGlobals($container, self::stimulus($config), self::domain($config), $exportRowLimit);
+        $this->exposeTwigGlobals($container, self::stimulus($config), self::select2($config), self::domain($config), $exportRowLimit);
     }
 
     #[\Override]
@@ -221,6 +223,28 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
         }
 
         return $domain;
+    }
+
+    /**
+     * The application's select2 controller identifier, or an empty string when it declines the
+     * widget.
+     *
+     * ⚠️ Unlike {@see self::stimulus()} this one MAY be empty, and the difference is deliberate:
+     * an empty `stimulus_identifier` breaks the builder outright — nothing would be wired — whereas
+     * an empty select2 identifier is a consumer saying "plain selects, thank you", which is a
+     * complete and working screen.
+     *
+     * @param array<array-key, mixed> $config
+     */
+    private static function select2(array $config): string
+    {
+        $identifier = $config['select2_identifier'] ?? 'ui--select2';
+
+        if (!\is_string($identifier)) {
+            throw new \LogicException('The "select2_identifier" node must be a string; the configuration tree guarantees it.');
+        }
+
+        return $identifier;
     }
 
     /**

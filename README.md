@@ -57,6 +57,11 @@ dataflow:
     # the shipped partial emits, so it has to match how you registered the controller.
     stimulus_identifier: dataflow--report-builder
 
+    # The identifier of YOUR select2 controller, attached to the two selects of a filter row.
+    # Empty keeps plain selects — an identifier you never registered is harmless either way,
+    # since Stimulus simply finds nothing and the plain select stays.
+    select2_identifier: ui--select2
+
     # Applied when no LimitsProviderInterface is bound. These are the defaults.
     limits:
         report_rows: 1000            # rows a run returns when the caller asks for no limit

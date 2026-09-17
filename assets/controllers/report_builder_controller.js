@@ -85,6 +85,16 @@ export default class extends Controller {
         // how the original's regex hack came about.
         loadUrl: { type: String, default: '' },
         previewRows: { type: Number, default: PREVIEW_ROWS },
+        // ⚠️ The Stimulus identifier of the APPLICATION's select2 controller, attached to the two
+        // selects of a filter row. The identifier is the application's, not this bundle's: it is
+        // derived from where the consumer put the controller file, exactly as this controller's own
+        // identifier is — hence a value and not a hard-coded string.
+        //
+        // ⚠️ EMPTY disables it, and an identifier naming a controller the application never
+        // registered is harmless: Stimulus finds nothing and the plain select stays, which works.
+        // That is the degradation this bundle wants — a field picker that lists forty paths is
+        // usable unstyled, and unusable if a missing library throws.
+        select2Identifier: { type: String, default: '' },
     };
 
     /**
@@ -569,6 +579,8 @@ export default class extends Controller {
             </button>
         `;
 
+        this._enhanceFilterSelects(inner);
+
         inner.querySelectorAll('[data-k]').forEach((element) => {
             if ('remove' === element.dataset.k) {
                 element.addEventListener('click', () => {
@@ -592,6 +604,46 @@ export default class extends Controller {
         card.appendChild(inner);
 
         return card;
+    }
+
+    /**
+     * Hands the two selects of a filter row to the application's select2 controller.
+     *
+     * ⚠️ The attributes are set BEFORE the row enters the document. Stimulus connects controllers
+     * on inserted nodes through a MutationObserver, so the widget builds itself when the card is
+     * appended — and tears itself down when `_renderFilters()` replaces the list, because the
+     * controller's `disconnect()` calls `select2('destroy')`. Attaching after insertion would work
+     * too and would flash an unstyled select first.
+     *
+     * ⚠️ The field picker keeps its clear button: its empty option is a real state, the one that
+     * means "no filter on this row yet". The operator picker does NOT — it has no empty option, so
+     * a clear would leave a row whose operator is blank, which the interpreter drops in silence.
+     */
+    _enhanceFilterSelects(inner) {
+        const identifier = this.select2IdentifierValue;
+
+        if (!identifier) {
+            return;
+        }
+
+        const enhance = (select, options) => {
+            if (!select) {
+                return;
+            }
+
+            select.setAttribute('data-controller', identifier);
+
+            for (const [name, value] of Object.entries(options)) {
+                select.setAttribute(`data-${identifier}-${name}-value`, value);
+            }
+        };
+
+        enhance(inner.querySelector('[data-k="path"]'), {
+            placeholder: t('dataflow.builder.filters.placeholder.field'),
+            'allow-clear': 'true',
+        });
+
+        enhance(inner.querySelector('[data-k="op"]'), { 'allow-clear': 'false' });
     }
 
     _pathOptions(selectedPath) {
