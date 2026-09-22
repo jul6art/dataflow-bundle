@@ -150,7 +150,7 @@ final readonly class ReportRunner
             $qb->addSelect($expression.' AS c'.$index);
 
             if (null !== $column->sort) {
-                $qb->addOrderBy($expression, 'asc' === $column->sort ? 'ASC' : 'DESC');
+                $qb->addOrderBy($expression, 'asc' === $column->sort ? \SortDirection::Ascending : \SortDirection::Descending);
             }
         }
 

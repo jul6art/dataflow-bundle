@@ -67,7 +67,7 @@ final class EntitySwitchResetsDefinitionTest extends TestCase
         $end = strpos($source, "\n    async ", $start + 1);
         $alternative = strpos($source, "\n    _", $start + 1);
 
-        if (false !== $alternative and (false === $end or $alternative < $end)) {
+        if (false !== $alternative && (false === $end || $alternative < $end)) {
             $end = $alternative;
         }
 
