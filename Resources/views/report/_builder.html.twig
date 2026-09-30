@@ -142,7 +142,10 @@
             <span>{{ 'dataflow.builder.export.row_limit_warning'|trans({'%limit%': dataflow_export_row_limit|number_format(0)}, 'dataflow') }}</span>
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {# ⚠️ No `save_url`, no save section: saved reports are ephemeral unless the application binds a store, and a
+           save button with nothing behind it only ever answers « not configured ». #}
+        {% set can_save = save_url|default('') is not empty %}
+        <div class="grid grid-cols-1 {{ can_save ? 'md:grid-cols-3' : 'md:grid-cols-2' }} gap-4 mb-4">
             <fieldset class="form-fieldset !mb-0">
                 <legend class="text-xs">{{ 'dataflow.builder.export.preview'|trans({}, 'dataflow') }}</legend>
                 <button type="button" class="btn-primary w-full" data-action="click->{{ stimulus }}#preview">
@@ -165,6 +168,7 @@
                 </div>
             </fieldset>
 
+            {% if can_save %}
             <fieldset class="form-fieldset !mb-0">
                 <legend class="text-xs">{{ 'dataflow.builder.export.section_save'|trans({}, 'dataflow') }}</legend>
                 <div class="flex gap-2">
@@ -186,6 +190,7 @@
                     </label>
                 {% endif %}
             </fieldset>
+            {% endif %}
         </div>
 
         <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg"

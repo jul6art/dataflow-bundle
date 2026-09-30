@@ -67,6 +67,29 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ **No store, no save control.** `ReportDefinitionStoreInterface` has no default — saved reports are ephemeral
+     * unless the application binds one — and an application that binds none passes no `save_url`. Rendering the name
+     * field and the floppy button anyway shipped a control that only ever answered « not configured »: a dead button
+     * on the one screen whose job is to look finished.
+     */
+    public function testWithoutASaveUrlTheSaveSectionIsNotRendered(): void
+    {
+        $html = $this->render('@Dataflow/report/_builder.html.twig', [
+            'entities' => [],
+            'fields_url' => '/f',
+            'run_url' => '/r',
+            'export_url' => '/e',
+            'can_share' => true,
+        ]);
+
+        self::assertStringNotContainsString('#save', $html, 'A save button is rendered with no store behind it.');
+        self::assertStringNotContainsString('-target="reportName"', $html);
+        self::assertStringNotContainsString('-target="shareToggle"', $html, 'Sharing a report that cannot be saved means nothing.');
+        self::assertStringContainsString('#exportCsv', $html, 'The export section must stay.');
+        self::assertStringContainsString('#preview', $html);
+    }
+
+    /**
      * ⚠️ The number shown is the CONFIGURED ceiling, not a literal in the template — proven by
      * changing the configuration and checking the page changes with it. A warning naming a
      * different number than the one `ReportRunner` actually enforces would be worse than none: an
