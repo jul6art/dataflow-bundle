@@ -183,7 +183,7 @@ final class XlsxReaderTest extends TestCase
         file_put_contents($path, "a,b\n1,2\n");
 
         $this->expectException(UnreadableFileException::class);
-        $this->expectExceptionMessage('dataflow.import.error.file_unreadable');
+        $this->expectExceptionMessageIsOrContains('dataflow.import.error.file_unreadable');
 
         iterator_to_array(new XlsxReader()->read($path));
     }
@@ -191,7 +191,7 @@ final class XlsxReaderTest extends TestCase
     public function testAMissingFileIsRefusedByName(): void
     {
         $this->expectException(UnreadableFileException::class);
-        $this->expectExceptionMessage('dataflow.import.error.file_unreadable');
+        $this->expectExceptionMessageIsOrContains('dataflow.import.error.file_unreadable');
 
         iterator_to_array(new XlsxReader()->read(sys_get_temp_dir().'/dataflow-absent-'.uniqid()));
     }

@@ -106,7 +106,7 @@ final class CsvReaderTest extends TestCase
         $path = $this->file("PK\x03\x04".str_repeat("\x00", 40));
 
         $this->expectException(UnreadableFileException::class);
-        $this->expectExceptionMessage('dataflow.import.error.binary_spreadsheet');
+        $this->expectExceptionMessageIsOrContains('dataflow.import.error.binary_spreadsheet');
 
         iterator_to_array(new CsvReader()->read($path));
     }
@@ -122,7 +122,7 @@ final class CsvReaderTest extends TestCase
     public function testAMissingFileIsRefusedByName(): void
     {
         $this->expectException(UnreadableFileException::class);
-        $this->expectExceptionMessage('dataflow.import.error.file_unreadable');
+        $this->expectExceptionMessageIsOrContains('dataflow.import.error.file_unreadable');
 
         iterator_to_array(new CsvReader()->read(sys_get_temp_dir().'/dataflow-absent-'.uniqid()));
     }

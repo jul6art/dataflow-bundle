@@ -171,7 +171,7 @@ final class HeaderInspectorTest extends TestCase
         };
 
         $this->expectException(UnreadableFileException::class);
-        $this->expectExceptionMessage('dataflow.import.error.empty_file');
+        $this->expectExceptionMessageIsOrContains('dataflow.import.error.empty_file');
 
         new HeaderInspector()->peek($reader, 'irrelevant.csv');
     }
