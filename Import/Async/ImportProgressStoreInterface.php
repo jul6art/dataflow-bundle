@@ -20,9 +20,9 @@ use Jul6Art\DataflowBundle\Import\ImportReport;
  * ## Why a port, not a bundled table
  *
  * ⚠️ Same reasoning as `Port\ReportDefinitionStoreInterface`: a progress record is a row with an
- * owner, a tenant, and a place on a screen, and none of that is this bundle's to invent. `superp`,
- * `cegeta` and `cereezer` do not share a tenancy model; a bundled entity would fit one of the three
- * and force a migration on the other two.
+ * owner, a tenant, and a place on a screen, and none of that is this bundle's to invent. The
+ * applications using this bundle do not share a tenancy model; a bundled entity would fit one of them
+ * and force a migration on the others.
  *
  * ⚠️ **Bound to {@see NullImportProgressStore} by default, unlike `ReportDefinitionStoreInterface`.**
  * That port has no default because an ephemeral report is still a complete feature; this one would

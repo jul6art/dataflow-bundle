@@ -79,7 +79,7 @@ final class ReportRunnerTest extends AbstractFunctionalTestCase
      * free report builder takes its column palette straight from `FieldCatalog::listFor()`, which
      * lists an embeddable's sub-fields as ordinary scalars. Nothing stopped a user from picking
      * one, and nothing filtered it before execution: the report answered 500. Reported on
-     * cereezer 2026-09-14 (`billingAddress.postalCode`, `billingAddress.countryCode`), fixed here
+     * cereezer 2026-09-14 (two nested address fields), fixed here
      * rather than worked around one application at a time.
      *
      * ⚠️ The fixture had to gain an embeddable for this test to exist at all — the bundle could
