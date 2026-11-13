@@ -124,7 +124,7 @@ dataflow:
 
 Désactivé par défaut : une application garde ses contrôleurs tant qu'elle n'active pas la clé.
 
-### 2. admin-bundle livre l'import de comptes (`admin.user_import`, 1.43.0)
+### 2. admin-bundle livre l'import de comptes (`admin.user_import`, 1.44.0)
 
 Pour la famille mono-locataire : devingame, devinthehood, tradebot, wtg et le squelette. Il comprend une définition
 `user`, un mappeur et un résolveur de doublons :
@@ -204,7 +204,7 @@ admin-bundle met dataflow-bundle en `suggest` : l'import de comptes ne se charge
 
 ## Conséquences
 
-- dataflow-bundle 1.16.0 (son badge passe à v1.16.0) et admin-bundle 1.43.0 (son badge n'écrit que la majeure),
+- dataflow-bundle 1.16.0 (son badge passe à v1.16.0) et admin-bundle 1.44.0 (son badge n'écrit que la majeure),
   des versions mineures. Les applications montent leur plancher.
 - Démonstrations d'abord (superp si confirmé, cereezer, tradebot, wtg, devinthehood), puis devingame et cegeta.
 - Fin du lot, puis de T20 : la mesure de duplication est rejouée. Les classes de ce tableau ne doivent plus
