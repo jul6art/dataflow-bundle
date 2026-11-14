@@ -772,6 +772,18 @@ context feeds the titles and subtitles (the index an import belongs to, named), 
 `<prefix>.new.hint`, when translated, adds the import's own advice under the upload (1.16.3). The French of the screens' keys
 (`dataflow.import.screen.*`, `.preview.*`, the new `.error.*`) is the consumer's, like the rest.
 
+⚠️ **The upload directory belongs to whoever creates it first.** `UploadedFile::move()` creates it
+with the process's umask: when a test suite run as root inside the container gets there before
+php-fpm, every later upload is refused ("The file could not be uploaded") while the tests stay
+green — seen in a consumer on 2026-11-14. Create it in the image, writable by the web server, as
+Symfony's own `var/` directories are.
+
+⚠️ **A guard read on the CONTROLLER does not see these screens.** An attribute such as
+`#[RequiresFeature]` (acl-bundle) is read from the controller of the matched route, and the
+bundle's controller carries none. Keep such a guard by routing the import to a controller of yours
+that carries the attribute and hands each action to `ImportController` (a public service), with
+`_import` in the route defaults — four one-line methods, the screens untouched.
+
 ### Running an import off the request thread
 
 `ImportRunner::run()` already needs no `Request` and no session — a report scheduler could always
