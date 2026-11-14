@@ -1,0 +1,57 @@
+{#
+    Step 1 of an import (ADR-0001): the file.
+
+    ⚠️ `enctype="multipart/form-data"` is MANDATORY on a file form: without it the browser posts the file's NAME as
+    a string, never its content.
+
+    The words are the import's (`<prefix>.new.title`, in its domain) and the bundle's (`dataflow.import.screen.*`).
+    `layout` is `dataflow.import.layout`, or what the definition hands over.
+#}
+{% extends layout %}
+
+{% block title %}{{ (prefix ~ '.new.title')|trans({}, domain) }}{% endblock %}
+
+{% block content %}
+    <div class="max-w-2xl" data-dataflow-import="{{ import }}" data-dataflow-step="upload">
+        {{ include('@Dataflow/import/_header.html.twig', {step: 'new'}) }}
+
+        {% if error %}
+            <div class="panel p-4 mb-6 border-l-4 border-red-500" role="alert" data-dataflow-error>
+                <p class="text-sm text-red-700 dark:text-red-300">{{ error|trans(error_parameters, error_domain) }}</p>
+            </div>
+        {% endif %}
+
+        <div class="form-panel">
+            <form action="{{ path(routes.upload, route_parameters) }}" method="POST" enctype="multipart/form-data" class="form-grid">
+                <input type="hidden" name="_token" value="{{ csrf_token('dataflow_import_upload') }}">
+                <fieldset class="form-fieldset">
+                    <legend>{{ 'dataflow.import.screen.file'|trans({}, 'dataflow') }}</legend>
+                    <div>
+                        <label for="dataflow-import-file" class="mt-2 flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg cursor-pointer bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition">
+                            <span class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fa-solid fa-file-csv text-3xl text-accent-500 mb-2"></i>
+                                <span class="text-sm text-slate-600 dark:text-slate-300"><span class="font-semibold">{{ 'dataflow.import.screen.choose'|trans({}, 'dataflow') }}</span> {{ 'dataflow.import.screen.or_drop'|trans({}, 'dataflow') }}</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ 'dataflow.import.screen.accept'|trans({}, 'dataflow') }}</span>
+                            </span>
+                            <input type="file" id="dataflow-import-file" name="file" accept=".csv,text/csv" class="hidden" required>
+                        </label>
+                        <p class="text-xs text-slate-500 mt-2">{{ 'dataflow.import.screen.hint'|trans({'%fields%': fields|join(', ')}, 'dataflow') }}</p>
+                        {% if routes.template %}
+                            <p class="text-xs mt-2">
+                                <a href="{{ path(routes.template, route_parameters) }}" class="text-accent-600 hover:underline" data-dataflow-template>
+                                    <i class="fa-solid fa-download"></i> {{ 'dataflow.import.screen.template'|trans({}, 'dataflow') }}
+                                </a>
+                            </p>
+                        {% endif %}
+                    </div>
+                </fieldset>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-upload"></i> {{ 'dataflow.import.screen.upload'|trans({}, 'dataflow') }}
+                    </button>
+                    <a href="{{ path(back.route, back.parameters) }}" class="btn-secondary">{{ 'dataflow.import.screen.cancel'|trans({}, 'dataflow') }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

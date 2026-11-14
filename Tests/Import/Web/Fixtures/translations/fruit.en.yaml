@@ -1,0 +1,20 @@
+fruit:
+    import:
+        new:
+            title: Import fruits
+            subtitle: A CSV of fruits
+        map:
+            title: Map the columns
+            subtitle: Which column is which
+        result:
+            title: Fruits imported
+            subtitle: What the file did
+        field:
+            name: Fruit name
+            colour: Colour
+        error:
+            refused: The orchard is closed.
+veg:
+    import:
+        new:
+            title: Import vegetables

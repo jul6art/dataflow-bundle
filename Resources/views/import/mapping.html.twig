@@ -1,0 +1,92 @@
+{#
+    Step 2 of an import (ADR-0001): each column of the file, offered every field — pre-selected when its header
+    matched, or as the operator just submitted it when the run was refused.
+
+    ⚠️ The PREVIEW and the COUNT (an option of the import, `preview()`) answer two questions: the rows show whether
+    a column is read right — swapped first and last names raise nothing, two strings are valid —, the count shows
+    what will be overwritten. The run button carries the count: a number read at the moment of the click is read.
+#}
+{% extends layout %}
+
+{% block title %}{{ (prefix ~ '.map.title')|trans({}, domain) }}{% endblock %}
+
+{% block content %}
+    <div class="max-w-3xl" data-dataflow-import="{{ import }}" data-dataflow-step="mapping">
+        {{ include('@Dataflow/import/_header.html.twig', {step: 'map'}) }}
+
+        {% if error %}
+            <div class="panel p-4 mb-6 border-l-4 border-red-500" role="alert" data-dataflow-error>
+                <p class="text-sm text-red-700 dark:text-red-300">{{ error|trans(error_parameters, error_domain) }}</p>
+            </div>
+        {% endif %}
+
+        <div class="form-panel">
+            <form action="{{ path(routes.run, route_parameters) }}" method="POST" class="form-grid">
+                <input type="hidden" name="_token" value="{{ csrf_token('dataflow_import_run') }}">
+                <fieldset class="form-fieldset">
+                    <legend>{{ 'dataflow.import.screen.mapping'|trans({}, 'dataflow') }}</legend>
+                    {{ include('@Dataflow/import/_mapper.html.twig', {
+                        inspection: inspection,
+                        fields: fields,
+                        selected: selected,
+                        required: required,
+                        label_prefix: prefix ~ '.field.',
+                        label_domain: domain,
+                    }) }}
+                </fieldset>
+
+                {% if preview %}
+                    {% if preview.rows is not empty %}
+                        <div class="mt-2 overflow-x-auto" data-dataflow-preview>
+                            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+                                {{ 'dataflow.import.preview.title'|trans({'%count%': preview.rows|length}, 'dataflow') }}
+                            </h2>
+                            <table class="min-w-full text-sm">
+                                <thead>
+                                    <tr class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                                        {% for field in preview.rows|first|keys %}
+                                            {% set label = prefix ~ '.field.' ~ field %}
+                                            <th class="text-left pb-2 pr-4 whitespace-nowrap">{{ label|trans({}, domain) != label ? label|trans({}, domain) : field }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in preview.rows %}
+                                        <tr class="border-t border-slate-100 dark:border-slate-700">
+                                            {% for value in row %}
+                                                <td class="py-2 pr-4 text-slate-800 dark:text-slate-200 whitespace-nowrap">{{ value|default('—') }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+
+                    {# ⚠️ The banner changes colour when rows will be MODIFIED: that is the case worth stopping for, and a
+                       piece of information as heavy as the rest of the page does not stop anybody. #}
+                    <div class="rounded-xl px-4 py-3 text-sm ring-1 {{ preview.updates > 0
+                            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 ring-amber-300 dark:ring-amber-700'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 ring-slate-200 dark:ring-slate-700' }}" data-dataflow-impact>
+                        <strong>{{ 'dataflow.import.preview.impact'|trans({'%total%': preview.total, '%creations%': preview.creations, '%updates%': preview.updates}, 'dataflow') }}</strong>
+                        {% if preview.updates > 0 %}
+                            <span class="block mt-1">{{ 'dataflow.import.preview.updates_warning'|trans({}, 'dataflow') }}</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-play"></i>
+                        {% if preview %}
+                            {{ 'dataflow.import.screen.run_counted'|trans({'%creations%': preview.creations, '%updates%': preview.updates}, 'dataflow') }}
+                        {% else %}
+                            {{ 'dataflow.import.screen.run'|trans({}, 'dataflow') }}
+                        {% endif %}
+                    </button>
+                    <a href="{{ path(routes.upload, route_parameters) }}" class="btn-secondary">{{ 'dataflow.import.screen.other_file'|trans({}, 'dataflow') }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

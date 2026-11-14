@@ -1,0 +1,3 @@
+{# A definition's report: its result's variables are absent when a batch failed — there was no result. #}
+{% extends '@Dataflow/import/report.html.twig' %}
+{% block dataflow_import_report_extra %}<p data-fruit-note>{{ fruit_note|default('') }}</p>{% endblock %}

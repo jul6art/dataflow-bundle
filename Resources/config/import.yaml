@@ -1,0 +1,43 @@
+# The import screens (ADR-0001), loaded only with `dataflow.import.enabled`: an application keeps its own controllers
+# until it turns the key on. No route is declared — the application routes ImportController under its own names.
+services:
+    _defaults:
+        autowire: false
+        autoconfigure: false
+        public: false
+
+    # The application's imports, by key, in the order of their priority — tagged `dataflow.import` with a `key`, by
+    # `#[AsImportDefinition]` on an autoconfigured service or by hand.
+    Jul6Art\DataflowBundle\Import\Web\ImportRegistry:
+        arguments:
+            - !tagged_iterator { tag: dataflow.import, index_by: key }
+
+    Jul6Art\DataflowBundle\Import\Web\UploadedImportStore:
+        arguments: ['%dataflow.import.directory%']
+
+    Jul6Art\DataflowBundle\Import\Web\UploadGuard:
+        arguments: ['%dataflow.import.max_bytes%']
+
+    Jul6Art\DataflowBundle\Import\Web\ImportPreviewBuilder: ~
+
+    # ⚠️ The two tags by hand, not by autoconfiguration (this file turns it off): `container.service_subscriber`
+    # feeds AbstractController::setContainer() — without it the controller has no router, no Twig, no security.
+    #
+    # ⚠️ Public: the controller resolver fetches it from the container by its class. Private, nothing references it,
+    # the container removes it, and the resolver builds one with `new` — a controller without its container.
+    #
+    # ⚠️ Autowired, this one service: AbstractController::setContainer() is a `#[Required]` method, which only
+    # autowiring calls. The constructor's arguments stay explicit.
+    Jul6Art\DataflowBundle\Import\Web\ImportController:
+        public: true
+        autowire: true
+        arguments:
+            $registry: '@Jul6Art\DataflowBundle\Import\Web\ImportRegistry'
+            $store: '@Jul6Art\DataflowBundle\Import\Web\UploadedImportStore'
+            $guard: '@Jul6Art\DataflowBundle\Import\Web\UploadGuard'
+            $inspector: '@Jul6Art\DataflowBundle\Import\HeaderInspector'
+            $previews: '@Jul6Art\DataflowBundle\Import\Web\ImportPreviewBuilder'
+            $responses: '@Jul6Art\DataflowBundle\Io\Http\TabularResponseFactory'
+            $dispatcher: '@event_dispatcher'
+            $layout: '%dataflow.import.layout%'
+        tags: ['controller.service_arguments', 'container.service_subscriber']

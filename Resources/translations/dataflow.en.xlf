@@ -398,6 +398,122 @@
                 <source>dataflow.builder.export.share_scope_organization</source>
                 <target>Share with my colleagues</target>
             </trans-unit>
+            <trans-unit id="dataflow.import.error.upload_failed" resname="dataflow.import.error.upload_failed">
+                <source>dataflow.import.error.upload_failed</source>
+                <target>The file could not be uploaded. Try again.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.file_too_large" resname="dataflow.import.error.file_too_large">
+                <source>dataflow.import.error.file_too_large</source>
+                <target>The file is too large.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.invalid_mime" resname="dataflow.import.error.invalid_mime">
+                <source>dataflow.import.error.invalid_mime</source>
+                <target>This file is not a CSV file.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.invalid_csrf" resname="dataflow.import.error.invalid_csrf">
+                <source>dataflow.import.error.invalid_csrf</source>
+                <target>The form has expired. Try again.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.file_expired" resname="dataflow.import.error.file_expired">
+                <source>dataflow.import.error.file_expired</source>
+                <target>The uploaded file is no longer available. Upload it again.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.mapping_required" resname="dataflow.import.error.mapping_required">
+                <source>dataflow.import.error.mapping_required</source>
+                <target>Map at least one column to a field.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.mapping_duplicate" resname="dataflow.import.error.mapping_duplicate">
+                <source>dataflow.import.error.mapping_duplicate</source>
+                <target>Two columns are mapped to the same field: keep only one.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.error.mapping_missing" resname="dataflow.import.error.mapping_missing">
+                <source>dataflow.import.error.mapping_missing</source>
+                <target>These fields need a column: %fields%.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.file" resname="dataflow.import.screen.file">
+                <source>dataflow.import.screen.file</source>
+                <target>File</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.choose" resname="dataflow.import.screen.choose">
+                <source>dataflow.import.screen.choose</source>
+                <target>Choose a file</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.or_drop" resname="dataflow.import.screen.or_drop">
+                <source>dataflow.import.screen.or_drop</source>
+                <target>or drop it here</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.accept" resname="dataflow.import.screen.accept">
+                <source>dataflow.import.screen.accept</source>
+                <target>CSV, with a header line</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.hint" resname="dataflow.import.screen.hint">
+                <source>dataflow.import.screen.hint</source>
+                <target>Recognised columns: %fields%.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.template" resname="dataflow.import.screen.template">
+                <source>dataflow.import.screen.template</source>
+                <target>Download the model</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.upload" resname="dataflow.import.screen.upload">
+                <source>dataflow.import.screen.upload</source>
+                <target>Upload</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.cancel" resname="dataflow.import.screen.cancel">
+                <source>dataflow.import.screen.cancel</source>
+                <target>Cancel</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.back" resname="dataflow.import.screen.back">
+                <source>dataflow.import.screen.back</source>
+                <target>Back</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.mapping" resname="dataflow.import.screen.mapping">
+                <source>dataflow.import.screen.mapping</source>
+                <target>Columns</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.run" resname="dataflow.import.screen.run">
+                <source>dataflow.import.screen.run</source>
+                <target>Run the import</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.run_counted" resname="dataflow.import.screen.run_counted">
+                <source>dataflow.import.screen.run_counted</source>
+                <target>Import: %creations% to create, %updates% to update</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.other_file" resname="dataflow.import.screen.other_file">
+                <source>dataflow.import.screen.other_file</source>
+                <target>Another file</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.batch_failed" resname="dataflow.import.screen.batch_failed">
+                <source>dataflow.import.screen.batch_failed</source>
+                <target>The import stopped at record %record%: a batch could not be written.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.rolled_back" resname="dataflow.import.screen.rolled_back">
+                <source>dataflow.import.screen.rolled_back</source>
+                <target>Nothing was kept: what had been written was rolled back.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.partially_committed" resname="dataflow.import.screen.partially_committed">
+                <source>dataflow.import.screen.partially_committed</source>
+                <target>The batches before it were written and kept.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.view" resname="dataflow.import.screen.view">
+                <source>dataflow.import.screen.view</source>
+                <target>See the list</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.screen.import_more" resname="dataflow.import.screen.import_more">
+                <source>dataflow.import.screen.import_more</source>
+                <target>Import another file</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.preview.title" resname="dataflow.import.preview.title">
+                <source>dataflow.import.preview.title</source>
+                <target>The first %count% rows, read with this mapping</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.preview.impact" resname="dataflow.import.preview.impact">
+                <source>dataflow.import.preview.impact</source>
+                <target>%total% rows: %creations% to create, %updates% to update.</target>
+            </trans-unit>
+            <trans-unit id="dataflow.import.preview.updates_warning" resname="dataflow.import.preview.updates_warning">
+                <source>dataflow.import.preview.updates_warning</source>
+                <target>Existing records will be overwritten with the values of the file.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

@@ -35,6 +35,13 @@ final class ConfigurationTest extends TestCase
         'stimulus_identifier' => 'dataflow--report-builder',
         'select2_identifier' => 'ui--select2',
         'csrf_token_id' => 'dataflow_report_builder',
+        // Off: an application keeps its own import controllers until it turns the screens on (ADR-0001).
+        'import' => [
+            'enabled' => false,
+            'directory' => '%kernel.project_dir%/var/import',
+            'layout' => 'admin/layout.html.twig',
+            'max_bytes' => 5242880,
+        ],
         'limits' => [
             'report_rows' => 1000,
             'export_rows' => 50000,

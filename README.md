@@ -7,7 +7,7 @@ Tabular import, export and report engine for Symfony
 
 <p align="left">
     <a href="https://opensource.org/licenses/MIT" target="_blank"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
-    <img src="https://img.shields.io/static/v1?label=stable&message=v1.15.4&color=0ea5e9" alt="Version">
+    <img src="https://img.shields.io/static/v1?label=stable&message=v1.16.0&color=0ea5e9" alt="Version">
 </p>
 
 Everything a management application needs to move tabular data across its own boundary: writing a
@@ -704,6 +704,71 @@ and choosing a reader by content" above for how the two are told apart and resol
 
 ⚠️ Detection is by CONTENT, never by MIME type: a browser sends `application/vnd.ms-excel` for a
 CSV saved out of Excel, so a MIME allow list that admits it admits real `.xls` workbooks too.
+
+### The import screens, ready-made (1.16)
+
+Upload, mapping, run and the downloadable model, for every import of the application — the screens
+each consumer used to copy (ADR-0001). Off by default:
+
+```yaml
+dataflow:
+    import:
+        enabled: true
+        directory: '%kernel.project_dir%/var/import'   # where a file waits between the screens
+        layout: 'admin/layout.html.twig'               # the screens fill its "content" block
+        max_bytes: 5242880                              # a guardrail; rows are what limits.import_rows bounds
+```
+
+An import is a service implementing `ImportDefinitionInterface` — extend `AbstractImportDefinition`
+— tagged `dataflow.import` under a key, by `#[AsImportDefinition('customer')]` on an autoconfigured
+service. It says its fields and the ones a run needs, its reader and writer (the dialect is the one
+choice it must make out loud), what the actor must be granted (`access()`, checked on every action),
+its words (`translationDomain()`, `translationPrefix()`: `<prefix>.new.title`, `<prefix>.map.title`,
+`<prefix>.result.title`, `<prefix>.field.<field>`), its routes and where "back" leads, and runs the
+import: `import($path, $mapping, ImportContext $context): ImportResult`. The context carries the
+account and the route's parameters — the `{id}` of the object an import belongs to.
+
+The bundle declares no route. Name them yourself, with the import's key in `_import`:
+
+```yaml
+admin_user_import_new:
+    path: /admin/users/import/new
+    controller: Jul6Art\DataflowBundle\Import\Web\ImportController::upload
+    methods: [GET, POST]
+    defaults: { _import: user }
+admin_user_import_mapping:
+    path: /admin/users/import/mapping
+    controller: Jul6Art\DataflowBundle\Import\Web\ImportController::mapping
+    methods: [GET]
+    defaults: { _import: user }
+admin_user_import_execute:
+    path: /admin/users/import/execute
+    controller: Jul6Art\DataflowBundle\Import\Web\ImportController::run
+    methods: [POST]
+    defaults: { _import: user }
+```
+
+— or one route for several imports, with an `{entity}` parameter: the upload screen then lists the
+imports of that route the actor may open, in their declared order (a site needs its customer).
+
+What the screens handle for you:
+
+- ⚠️ **Only a random NAME travels in the session**, checked before use: a forged `../../.env` or an
+  absolute path designates no file. A file is consumed by a successful run; a refused mapping keeps
+  it, and an abandoned one is swept a day later.
+- The upload guard: the size, a WIDE list of text types, and a binary workbook refused with its own
+  message (detected by content, before the type).
+- The mapping by column position; two columns for one field and a required field without a column,
+  refused on the mapping screen with what was submitted still selected; a 422 for every refusal.
+- `preview()`: the first rows read with the mapping, and how many rows would be created or updated
+  (`duplicateResolver()`), the count on the run button.
+- `ImportStartingEvent`, before anything is written: a listener that sets a response replaces the
+  run — a quota exceeded sends the operator to an upgrade page.
+- `ImportFailedException`: how far the file went, and whether what was written was rolled back.
+
+Every screen can be replaced per import (`templates()`), and receives `templateContext()`; the
+report also receives what `ImportResult::$variables` carries. The French of the screens' keys
+(`dataflow.import.screen.*`, `.preview.*`, the new `.error.*`) is the consumer's, like the rest.
 
 ### Running an import off the request thread
 

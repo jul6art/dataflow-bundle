@@ -1,0 +1,29 @@
+{#
+    The title of an import screen, and the other imports this actor may open from the same place.
+
+    ⚠️ Only the imports of the same route — one `{entity}` apart — and in their declared order, which carries the most useful information of the
+    screen when one import needs another first: a site needs its customer, an asset its site.
+#}
+<div class="mb-6">
+    <nav class="text-xs text-slate-400 dark:text-slate-500 mb-3">
+        <a href="{{ path(back.route, back.parameters) }}" class="hover:text-slate-700 dark:hover:text-slate-300">
+            <i class="fa-solid fa-arrow-left"></i> {{ 'dataflow.import.screen.back'|trans({}, 'dataflow') }}
+        </a>
+    </nav>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ (prefix ~ '.' ~ step ~ '.title')|trans({}, domain) }}</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ (prefix ~ '.' ~ step ~ '.subtitle')|trans({}, domain) }}</p>
+
+    {% if step == 'new' and imports|length > 1 %}
+        <ol class="flex flex-wrap gap-2 mt-4 text-xs" data-dataflow-imports>
+            {% for other in imports %}
+                <li>
+                    {% if other.key == import %}
+                        <span class="inline-block rounded-full px-3 py-1 bg-accent-600 text-white">{{ loop.index }}. {{ (other.prefix ~ '.new.title')|trans({}, other.domain) }}</span>
+                    {% else %}
+                        <a href="{{ path(other.routes.upload, route_parameters|merge({entity: other.key})) }}" class="inline-block rounded-full px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">{{ loop.index }}. {{ (other.prefix ~ '.new.title')|trans({}, other.domain) }}</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    {% endif %}
+</div>

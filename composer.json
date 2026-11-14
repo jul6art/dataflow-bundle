@@ -37,10 +37,14 @@
         "phpstan/phpstan-symfony": "^2.1.1",
         "phpunit/phpunit": "^13.4.5",
         "rector/rector": "^2.8.3",
+        "symfony/browser-kit": "^7.4 || ^8.0",
+        "symfony/css-selector": "^7.4 || ^8.0",
         "symfony/flex": "^2.11",
         "symfony/framework-bundle": "^7.4 || ^8.0",
         "symfony/messenger": "^7.4 || ^8.0",
+        "symfony/mime": "^7.4 || ^8.0",
         "symfony/phpunit-bridge": "^7.4 || ^8.0",
+        "symfony/security-bundle": "^7.4 || ^8.0",
         "symfony/security-csrf": "^7.4 || ^8.0",
         "symfony/twig-bundle": "^7.4 || ^8.0",
         "symfony/var-dumper": "^7.4 || ^8.0",
@@ -90,6 +94,8 @@
         "symfony/twig-bundle": "Renders the shipped Twig partials. Without it only the PHP engine is available.",
         "jul6art/audit-bundle": "Gives ExportAuditorInterface something to write to. Without it exports are not journalled.",
         "symfony/messenger": "Carries an import off the request thread. Without it, ImportMessageHandler is removed by AsyncImportPass and importing stays synchronous.",
-        "symfony/security-csrf": "Protects the report builder's \"save\" route (lot 2.9). Without it, DataflowCsrfExtension mints an empty token and ReportBuilderCsrfChecker accepts every request — the same trade datatable-bundle's own preferences endpoint makes."
+        "symfony/security-csrf": "Protects the report builder's \"save\" route (lot 2.9). Without it, DataflowCsrfExtension mints an empty token and ReportBuilderCsrfChecker accepts every request — the same trade datatable-bundle's own preferences endpoint makes.",
+        "symfony/mime": "Guesses the type of a file uploaded to the import screens (dataflow.import, 1.16). Required when they are enabled.",
+        "symfony/security-bundle": "The import screens check each import's access (dataflow.import, 1.16)."
     }
 }

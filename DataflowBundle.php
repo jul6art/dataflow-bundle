@@ -6,10 +6,12 @@ namespace Jul6Art\DataflowBundle;
 
 use Jul6Art\DataflowBundle\DependencyInjection\Compiler\AsyncImportPass;
 use Jul6Art\DataflowBundle\DependencyInjection\Compiler\OptionalContractPass;
+use Jul6Art\DataflowBundle\Import\Web\AsImportDefinition;
 use Jul6Art\DataflowBundle\Io\Reader\TabularReaderInterface;
 use Jul6Art\DataflowBundle\Io\TabularWriterInterface;
 use Jul6Art\DataflowBundle\Report\Catalog\ReportableEntityProviderInterface;
 use Jul6Art\DataflowBundle\Report\Transformer\ValueTransformerInterface;
+use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
@@ -79,5 +81,10 @@ class DataflowBundle extends Bundle
 
         $container->registerForAutoconfiguration(TabularReaderInterface::class)
             ->addTag('dataflow.tabular_reader');
+
+        // An import of the application joins the screens by its attribute: `#[AsImportDefinition('customer')]`.
+        $container->registerAttributeForAutoconfiguration(AsImportDefinition::class, static function (ChildDefinition $definition, AsImportDefinition $attribute): void {
+            $definition->addTag('dataflow.import', ['key' => $attribute->key, 'priority' => $attribute->priority]);
+        });
     }
 }

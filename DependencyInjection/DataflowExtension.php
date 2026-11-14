@@ -6,12 +6,14 @@ namespace Jul6Art\DataflowBundle\DependencyInjection;
 
 use Jul6Art\DataflowBundle\Port\ConfiguredLimitsProvider;
 use Jul6Art\DataflowBundle\Port\Limits;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
+use Symfony\Component\Mime\MimeTypes;
 
 /**
  * Wires the bundle's services and turns its configuration into something the services can read.
@@ -170,6 +172,49 @@ class DataflowExtension extends Extension implements PrependExtensionInterface
         $tokenId = $config['csrf_token_id'] ?? null;
         \assert(\is_string($tokenId) && '' !== $tokenId, 'Validated non-empty by the configuration tree.');
         $container->setParameter('dataflow.csrf_token_id', $tokenId);
+
+        $import = $config['import'] ?? [];
+        \assert(\is_array($import));
+
+        if (true === ($import['enabled'] ?? false)) {
+            $this->loadImportScreens($container, $loader, $import);
+        }
+    }
+
+    /**
+     * The import screens: a controller, its store, its guard and the registry of the application's imports.
+     *
+     * ⚠️ Refused at compile time without FrameworkBundle's controller base or Twig rather than at the first request:
+     * both are suggested packages, and an application that turned the screens on without them would otherwise learn
+     * it from a 500 on its import page.
+     *
+     * @param array<array-key, mixed> $import
+     */
+    private function loadImportScreens(ContainerBuilder $container, YamlFileLoader $loader, array $import): void
+    {
+        // ⚠️ `kernel.bundles`, not `hasExtension('twig')`: `load()` runs on a container that knows no other extension.
+        $bundles = $container->hasParameter('kernel.bundles') ? $container->getParameter('kernel.bundles') : [];
+
+        if (!class_exists(AbstractController::class) || !\is_array($bundles) || !isset($bundles['TwigBundle'])) {
+            throw new \LogicException('dataflow.import needs symfony/framework-bundle and symfony/twig-bundle: its screens are a controller and three templates.');
+        }
+
+        if (!class_exists(MimeTypes::class)) {
+            throw new \LogicException('dataflow.import needs symfony/mime: the type of an uploaded file is guessed from its content, never taken from the browser.');
+        }
+
+        $directory = $import['directory'] ?? null;
+        $layout = $import['layout'] ?? null;
+        $maxBytes = $import['max_bytes'] ?? null;
+
+        if (!\is_string($directory) || !\is_string($layout) || !\is_int($maxBytes)) {
+            throw new \LogicException('The import settings are missing from the configuration tree.');
+        }
+
+        $container->setParameter('dataflow.import.directory', $directory);
+        $container->setParameter('dataflow.import.layout', $layout);
+        $container->setParameter('dataflow.import.max_bytes', $maxBytes);
+        $loader->load('import.yaml');
     }
 
     /**

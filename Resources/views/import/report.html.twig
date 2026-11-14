@@ -1,0 +1,36 @@
+{#
+    Step 3 of an import (ADR-0001): what the run did.
+
+    ⚠️ The failure of a batch comes BEFORE the counters: a flush in error closes the entity manager, there is no
+    "carry on", and what the operator must read first is how far the file went — then whether what was written was
+    rolled back.
+#}
+{% extends layout %}
+
+{% block title %}{{ (prefix ~ '.result.title')|trans({}, domain) }}{% endblock %}
+
+{% block content %}
+    <div class="max-w-3xl" data-dataflow-import="{{ import }}" data-dataflow-step="report">
+        {{ include('@Dataflow/import/_header.html.twig', {step: 'result'}) }}
+
+        {% if failed_at is defined %}
+            <div class="panel p-4 mb-6 border-l-4 border-red-500" role="alert" data-dataflow-failure>
+                <p class="text-sm font-semibold text-red-700 dark:text-red-300">
+                    {{ 'dataflow.import.screen.batch_failed'|trans({'%record%': failed_at}, 'dataflow') }}
+                </p>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    {{ (rolled_back ? 'dataflow.import.screen.rolled_back' : 'dataflow.import.screen.partially_committed')|trans({}, 'dataflow') }}
+                </p>
+            </div>
+        {% endif %}
+
+        {% block dataflow_import_report_extra %}{% endblock %}
+
+        {{ include('@Dataflow/import/_report.html.twig', {report: report}) }}
+
+        <div class="flex gap-2">
+            <a href="{{ path(back.route, back.parameters) }}" class="btn-primary">{{ 'dataflow.import.screen.view'|trans({}, 'dataflow') }}</a>
+            <a href="{{ path(routes.upload, route_parameters) }}" class="btn-secondary">{{ 'dataflow.import.screen.import_more'|trans({}, 'dataflow') }}</a>
+        </div>
+    </div>
+{% endblock %}
