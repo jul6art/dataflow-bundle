@@ -320,6 +320,49 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * ⚠️ Every select of a mapping is a Select2 of the application (`dataflow.select2_identifier`): the partial
+     * rendered native selects, the one widget of these screens that was not.
+     */
+    public function testTheMappersSelectsAreTheApplicationsSelect2(): void
+    {
+        $html = $this->render('@Dataflow/import/_mapper.html.twig', [
+            'inspection' => new HeaderInspection(['E-Mail'], [0 => 'email']),
+            'fields' => ['email'],
+        ]);
+
+        self::assertStringContainsString('<select name="mapping[0]" class="form-control text-sm" data-controller="ui--select2">', $html);
+    }
+
+    public function testAnEmptySelect2IdentifierLeavesTheMappersSelectsPlain(): void
+    {
+        $html = $this->render('@Dataflow/import/_mapper.html.twig', [
+            'inspection' => new HeaderInspection(['E-Mail'], [0 => 'email']),
+            'fields' => ['email'],
+        ], ['select2_identifier' => '']);
+
+        self::assertStringNotContainsString('data-controller', $html);
+    }
+
+    /**
+     * A field is offered by its label when the import translates one, by its key otherwise; a required field is
+     * marked; and what was submitted stays selected, so a refused mapping is fixed rather than started over.
+     */
+    public function testTheMapperOffersLabelsMarksTheRequiredFieldsAndKeepsTheSubmittedMapping(): void
+    {
+        $html = $this->render('@Dataflow/import/_mapper.html.twig', [
+            'inspection' => new HeaderInspection(['Col A', 'Col B'], [0 => 'email']),
+            'fields' => ['email', 'name'],
+            'selected' => [1 => 'email'],
+            'required' => ['email'],
+            'label_prefix' => 'consumer.field.',
+            'label_domain' => 'consumer',
+        ]);
+
+        self::assertStringContainsString('<option value="email" selected>email *</option>', $html, 'No label translated: the key, marked as required.');
+        self::assertMatchesRegularExpression('#name="mapping\[0\]".*?<option value="email" >#s', $html, 'The submitted mapping wins over the inspection\'s.');
+    }
+
+    /**
      * ⚠️ A dry run says so on the page. Without it a panel announcing "1 240 imported" after a
      * preview is why somebody runs the real import a second time.
      */

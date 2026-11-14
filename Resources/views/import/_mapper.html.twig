@@ -15,9 +15,21 @@
 
     ⚠️ The partial emits no `<form>`, no CSRF token and no submit button. The action, the token name
     and the route are the application's, and a bundle that guessed them would be wrong in all three.
+
+    Optional, since 1.16:
+        selected:     the mapping to show selected (default: the inspection's) — what was just submitted, when a
+                      run was refused, so the operator fixes it instead of starting over;
+        required:     the fields a run needs, marked in the list;
+        label_prefix, label_domain: a field's label is `label_prefix ~ field` in `label_domain`, when that key is
+                      translated; the field key otherwise.
+
+    ⚠️ Every select mounts the application's Select2 controller (`dataflow.select2_identifier`): a native select is
+    not what a screen of these applications shows.
 #}
 {% set fields = fields|default([]) %}
-{% set mapping = inspection.mapping|default({}) %}
+{% set mapping = selected|default(inspection.mapping|default({})) %}
+{% set required = required|default([]) %}
+{% set select2 = dataflow_select2|default('') %}
 {% set ambiguous = inspection.ambiguous|default([]) %}
 
 {% if ambiguous is not empty %}
@@ -55,10 +67,12 @@
                     {% endif %}
                 </td>
                 <td class="px-2 py-2">
-                    <select name="mapping[{{ index }}]" class="form-control text-sm">
+                    <select name="mapping[{{ index }}]" class="form-control text-sm"{% if select2 %} data-controller="{{ select2 }}"{% endif %}>
                         <option value="">{{ 'dataflow.import.mapper.ignore'|trans({}, 'dataflow') }}</option>
                         {% for field in fields %}
-                            <option value="{{ field }}" {{ mapping[index]|default('') == field ? 'selected' : '' }}>{{ field }}</option>
+                            {% set label = label_prefix is defined ? label_prefix ~ field : field %}
+                            {% set translated = label_prefix is defined ? label|trans({}, label_domain|default('messages')) : field %}
+                            <option value="{{ field }}" {{ mapping[index]|default('') == field ? 'selected' : '' }}>{{ translated != label ? translated : field }}{{ field in required ? ' *' : '' }}</option>
                         {% endfor %}
                     </select>
                 </td>
