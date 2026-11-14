@@ -2,7 +2,7 @@
 
 - **Statut** : Accepté — 2026-11-14, les quatre points confirmés comme recommandé (voir « Décisions du 2026-11-14 »)
 - **Décideurs** : jul6art
-- **Origine** : audit Fable 5.2, T20, lot 6 (le dernier lot du chantier de remontée)
+- **Origine** : la remontée dans les bundles du code que le squelette recopiait dans chaque application (le dernier de six lots)
 - **Bundles** : dataflow-bundle (l'écran), admin-bundle (l'import de comptes, `admin.user_import`)
 
 ## Contexte
