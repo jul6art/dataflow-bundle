@@ -1,6 +1,6 @@
 # ADR-0001 — L'écran d'import, et l'import de comptes
 
-- **Statut** : Proposé — 2026-11-13, à valider par jul6art avant d'écrire du code
+- **Statut** : Accepté — 2026-11-14, les quatre points confirmés comme recommandé (voir « Décisions du 2026-11-14 »)
 - **Décideurs** : jul6art
 - **Origine** : audit Fable 5.2, T20, lot 6 (le dernier lot du chantier de remontée)
 - **Bundles** : dataflow-bundle (l'écran), admin-bundle (l'import de comptes, `admin.user_import`)
@@ -177,6 +177,16 @@ admin-bundle met dataflow-bundle en `suggest` : l'import de comptes ne se charge
    deux définitions. Ses mappeurs gardent leur quota de sièges et leurs jetons d'invitation. Sa section « NOT
    adopted » ne l'exclut pas. Le faire dans ce lot ? La proposition est oui, après les autres applications.
 4. **L'aperçu de cereezer en option du bundle**, plutôt qu'une fonction qui lui reste propre.
+
+## Décisions du 2026-11-14
+
+Les quatre points, tranchés comme recommandé :
+
+1. **Le rangement** : l'écran dans dataflow-bundle, l'import de comptes dans admin-bundle.
+2. **Trois écrans partout**, famille comprise.
+3. **superp entre dans le lot**, après les autres applications : ses trois imports (comptes, produits, contacts du
+   CRM) deviennent des définitions ; leurs mappeurs gardent le quota de sièges et les invitations.
+4. **L'aperçu de cereezer devient une option du bundle** (`preview: true` par import).
 
 ## Tests exigés
 
