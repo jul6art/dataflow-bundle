@@ -188,6 +188,28 @@ Les quatre points, tranchés comme recommandé :
    CRM) deviennent des définitions ; leurs mappeurs gardent le quota de sièges et les invitations.
 4. **L'aperçu de cereezer devient une option du bundle** (`preview: true` par import).
 
+### Ce que l'écriture a précisé (2026-11-14)
+
+- **Les routes d'un import sont nommées par sa définition** (`routes()` : dépôt, correspondance, lancement, modèle
+  facultatif). Le contrôleur lit la clé dans le défaut `_import`, ou dans le paramètre `{entity}` d'une route qui
+  sert plusieurs imports. L'écran de dépôt ne liste que les imports de la même route : un import qui vit sous un
+  `{id}` (les constituants d'un indice) ne peut pas être lié depuis un écran qui n'a pas cet identifiant.
+- **Un refus se dit sur l'écran qu'il concerne, en 422** — un fichier trop lourd au dépôt, deux colonnes vers un
+  champ à la correspondance, avec la sélection soumise conservée —, jamais par un message flash après une
+  redirection qui perdrait le fichier ou la correspondance.
+- **Le lecteur et l'écrivain ne sont pas fournis par défaut** (`AbstractImportDefinition`) : le dialecte est le
+  seul choix qu'une définition doit faire à voix haute. Un défaut en virgules lirait un fichier français en une
+  colonne, sans erreur nulle part.
+- **La session garde un fichier par import ET par objet** (les paramètres de la route) : deux indices importés
+  dans deux onglets n'échangent pas leurs fichiers. Un fichier abandonné est balayé au dépôt suivant, au bout
+  d'un jour.
+- **Le français des écrans reste aux applications**, comme celui des autres clés du bundle : son catalogue est
+  anglais, par règle (voir l'en-tête de `dataflow.en.xlf`).
+- **Le partiel `_mapper` monte le Select2 de l'application** (`select2_identifier`), traduit le libellé d'un champ
+  quand l'import en donne un (`<prefix>.field.<champ>`), marque les champs requis et garde la sélection soumise.
+- **`symfony/mime`** devient une suggestion, vérifiée à la compilation quand les écrans sont allumés : le type
+  d'un fichier se devine par son contenu, jamais par ce que dit le navigateur.
+
 ## Tests exigés
 
 - **Bundle**, chaque garde :
