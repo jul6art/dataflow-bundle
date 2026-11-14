@@ -209,7 +209,7 @@ final class ImportScreensTest extends WebTestCase
         $crawler = $this->client->submit($crawler->filter('form')->form(['mapping[0]' => '', 'mapping[1]' => 'colour']));
 
         self::assertResponseStatusCodeSame(422);
-        self::assertSame('These fields need a column: name.', $crawler->filter('[data-dataflow-error]')->text());
+        self::assertSame('These fields need a column: Fruit name.', $crawler->filter('[data-dataflow-error]')->text(), 'By its label, the word of the select to change.');
     }
 
     public function testARunWithoutItsTokenIsRefused(): void

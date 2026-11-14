@@ -16,6 +16,10 @@
         {{ include('@Dataflow/import/_header.html.twig', {step: 'map'}) }}
 
         {% if error %}
+            {# The fields a run needs, named by their label — the words of the select the operator has to change. #}
+            {% if missing is defined %}
+                {% set error_parameters = error_parameters|merge({'%fields%': missing|map(field => (prefix ~ '.field.' ~ field)|trans({}, domain) != prefix ~ '.field.' ~ field ? (prefix ~ '.field.' ~ field)|trans({}, domain) : field)|join(', ')}) %}
+            {% endif %}
             <div class="mb-6 rounded-xl px-4 py-3 ring-1 bg-red-50 dark:bg-red-900/30 ring-red-300 dark:ring-red-700" role="alert" data-dataflow-error>
                 <p class="text-sm text-red-700 dark:text-red-300">{{ error|trans(error_parameters, error_domain) }}</p>
             </div>

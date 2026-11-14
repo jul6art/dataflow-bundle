@@ -363,6 +363,21 @@ final class PartialsTest extends AbstractFunctionalTestCase
     }
 
     /**
+     * The fields no column supplies, named by their label when the import translates one — the words of the selects.
+     */
+    public function testTheFieldsNoColumnSuppliesAreNamedByTheirLabelOrTheirKey(): void
+    {
+        $html = $this->render('@Dataflow/import/_mapper.html.twig', [
+            'inspection' => new HeaderInspection(['Col A'], [], [], [0], ['email', 'name']),
+            'fields' => ['email', 'name'],
+            'label_prefix' => 'consumer.field.',
+            'label_domain' => 'consumer',
+        ]);
+
+        self::assertStringContainsString('No column supplies: email, name', $html, 'No label translated: the keys.');
+    }
+
+    /**
      * ⚠️ A dry run says so on the page. Without it a panel announcing "1 240 imported" after a
      * preview is why somebody runs the real import a second time.
      */

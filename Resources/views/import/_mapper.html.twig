@@ -44,7 +44,7 @@
 
 {% if inspection.missing|default([]) is not empty %}
     <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">
-        {{ 'dataflow.import.mapper.missing'|trans({'%fields%': inspection.missing|join(', ')}, 'dataflow') }}
+        {{ 'dataflow.import.mapper.missing'|trans({'%fields%': inspection.missing|map(field => label_prefix is defined and (label_prefix ~ field)|trans({}, label_domain|default('messages')) != label_prefix ~ field ? (label_prefix ~ field)|trans({}, label_domain|default('messages')) : field)|join(', ')}, 'dataflow') }}
     </p>
 {% endif %}
 

@@ -347,7 +347,7 @@ final class ImportController extends AbstractController
      * @param array<int, string> $mapping
      * @param list<string>       $required
      *
-     * @return array{error: string, error_parameters?: array<string, string>}|null
+     * @return array{error: string, error_parameters?: array<string, string>, missing?: list<string>}|null
      */
     private static function refusalOf(array $mapping, array $required): ?array
     {
@@ -362,7 +362,9 @@ final class ImportController extends AbstractController
         $missing = array_values(array_diff($required, $mapping));
 
         if ([] !== $missing) {
-            return ['error' => 'dataflow.import.error.mapping_missing', 'error_parameters' => ['%fields%' => implode(', ', $missing)]];
+            // `missing` lets the screen name the fields by their LABEL; `%fields%` keeps their keys for a template
+            // that does not.
+            return ['error' => 'dataflow.import.error.mapping_missing', 'error_parameters' => ['%fields%' => implode(', ', $missing)], 'missing' => $missing];
         }
 
         return null;
