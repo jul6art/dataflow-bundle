@@ -42,6 +42,20 @@ final class ImportScreensTest extends WebTestCase
     }
 
     /**
+     * ⚠️ With the lowest dependencies, the kernel leaves its exception handlers behind, which this suite's
+     * `failOnRisky` turns into failures: unwound here, as AbstractFunctionalTestCase does.
+     */
+    #[\Override]
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        for ($i = 0; $i < 16 && self::currentExceptionHandler() !== $this->handlerBeforeBoot; ++$i) {
+            restore_exception_handler();
+        }
+    }
+
+    /**
      * @param array<string, mixed> $options
      */
     #[\Override]
@@ -56,6 +70,7 @@ final class ImportScreensTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame('Import fruits', $crawler->filter('h1')->text());
+        self::assertSame('Import fruits · Orchard', $crawler->filter('title')->text(), 'The screen\'s title, then the layout\'s: the application\'s name.');
         self::assertCount(1, $crawler->filter('input[type=file][name=file]'));
         self::assertCount(1, $crawler->filter('[data-dataflow-template]'));
         self::assertCount(1, $crawler->filter('input[name=_token]'));
@@ -310,20 +325,6 @@ final class ImportScreensTest extends WebTestCase
         $this->client->request('GET', '/many/many_stones');
 
         self::assertResponseStatusCodeSame(404);
-    }
-
-    /**
-     * ⚠️ With the lowest dependencies, the kernel leaves its exception handlers behind, which this suite's
-     * `failOnRisky` turns into failures: unwound here, as AbstractFunctionalTestCase does.
-     */
-    #[\Override]
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        for ($i = 0; $i < 16 && self::currentExceptionHandler() !== $this->handlerBeforeBoot; ++$i) {
-            restore_exception_handler();
-        }
     }
 
     private static function currentExceptionHandler(): ?callable

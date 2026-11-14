@@ -8,14 +8,15 @@
 #}
 {% extends layout %}
 
-{% block title %}{{ (prefix ~ '.map.title')|trans({}, domain) }}{% endblock %}
+{# The screen's title, then the layout's own — the application's name in admin-bundle's shell. #}
+{% block title %}{% set layout_title = parent()|trim %}{{ (prefix ~ '.map.title')|trans({}, domain) }}{{ layout_title is not empty ? ' · ' ~ layout_title : '' }}{% endblock %}
 
 {% block content %}
     <div class="max-w-3xl" data-dataflow-import="{{ import }}" data-dataflow-step="mapping">
         {{ include('@Dataflow/import/_header.html.twig', {step: 'map'}) }}
 
         {% if error %}
-            <div class="panel p-4 mb-6 border-l-4 border-red-500" role="alert" data-dataflow-error>
+            <div class="mb-6 rounded-xl px-4 py-3 ring-1 bg-red-50 dark:bg-red-900/30 ring-red-300 dark:ring-red-700" role="alert" data-dataflow-error>
                 <p class="text-sm text-red-700 dark:text-red-300">{{ error|trans(error_parameters, error_domain) }}</p>
             </div>
         {% endif %}
