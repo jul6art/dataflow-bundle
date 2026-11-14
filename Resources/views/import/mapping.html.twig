@@ -73,7 +73,9 @@
                     <div class="rounded-xl px-4 py-3 text-sm ring-1 {{ preview.updates > 0
                             ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 ring-amber-300 dark:ring-amber-700'
                             : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 ring-slate-200 dark:ring-slate-700' }}" data-dataflow-impact>
-                        <strong>{{ 'dataflow.import.preview.impact'|trans({'%total%': preview.total, '%creations%': preview.creations, '%updates%': preview.updates}, 'dataflow') }}</strong>
+                        {# `%count%` (the total) chooses the singular or the plural, `one|many` (1.16.4); `%total%` stays for the
+                           catalogues written before. #}
+                        <strong>{{ 'dataflow.import.preview.impact'|trans({'%count%': preview.total, '%total%': preview.total, '%creations%': preview.creations, '%updates%': preview.updates}, 'dataflow') }}</strong>
                         {% if preview.updates > 0 %}
                             <span class="block mt-1">{{ 'dataflow.import.preview.updates_warning'|trans({}, 'dataflow') }}</span>
                         {% endif %}

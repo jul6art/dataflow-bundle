@@ -7,7 +7,7 @@ Tabular import, export and report engine for Symfony
 
 <p align="left">
     <a href="https://opensource.org/licenses/MIT" target="_blank"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
-    <img src="https://img.shields.io/static/v1?label=stable&message=v1.16.3&color=0ea5e9" alt="Version">
+    <img src="https://img.shields.io/static/v1?label=stable&message=v1.16.4&color=0ea5e9" alt="Version">
 </p>
 
 Everything a management application needs to move tabular data across its own boundary: writing a
@@ -771,6 +771,8 @@ report also receives what `ImportResult::$variables` carries. A `title_parameter
 context feeds the titles and subtitles (the index an import belongs to, named), and
 `<prefix>.new.hint`, when translated, adds the import's own advice under the upload (1.16.3). The French of the screens' keys
 (`dataflow.import.screen.*`, `.preview.*`, the new `.error.*`) is the consumer's, like the rest.
+`.preview.title` and `.preview.impact` receive `%count%` and take two forms, `singular|plural`
+(1.16.4): « La première ligne…|Les %count% premières lignes… » — a single form says "1 rows".
 
 ⚠️ **The upload directory belongs to whoever creates it first.** `UploadedFile::move()` creates it
 with the process's umask: when a test suite run as root inside the container gets there before

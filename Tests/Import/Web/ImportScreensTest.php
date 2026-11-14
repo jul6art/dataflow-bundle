@@ -287,6 +287,22 @@ final class ImportScreensTest extends WebTestCase
         self::assertCount(3, $crawler->filter('[data-dataflow-preview] tbody tr'));
         self::assertSame('3 rows: 2 to create, 1 to update.', $crawler->filter('[data-dataflow-impact] strong')->text());
         self::assertStringContainsString('2 to create, 1 to update', $crawler->filter('button[type=submit]')->text(), 'The button carries the count.');
+        self::assertSame('The first 3 rows, read with this mapping', $crawler->filter('[data-dataflow-preview] h2')->text());
+    }
+
+    /**
+     * ⚠️ **One row is a row**: the title and the impact agree with their number. Both read `%count%`, Symfony's
+     * plural selector — the impact used to receive `%total%` only, and a consumer could not even write the singular:
+     * "1 rows" on screen, "1 lignes" in French (seen in a consumer on 2026-11-14).
+     */
+    public function testThePreviewOfASingleRowSpeaksInTheSingular(): void
+    {
+        $this->upload('/previewed/import', "name;colour\napple;red\n");
+
+        $crawler = $this->client->followRedirect();
+
+        self::assertSame('The first row, read with this mapping', $crawler->filter('[data-dataflow-preview] h2')->text());
+        self::assertSame('1 row: 0 to create, 1 to update.', $crawler->filter('[data-dataflow-impact] strong')->text());
     }
 
     public function testTheModelIsTheFieldKeysInTheReadersDialect(): void

@@ -504,11 +504,11 @@
             </trans-unit>
             <trans-unit id="dataflow.import.preview.title" resname="dataflow.import.preview.title">
                 <source>dataflow.import.preview.title</source>
-                <target>The first %count% rows, read with this mapping</target>
+                <target>The first row, read with this mapping|The first %count% rows, read with this mapping</target>
             </trans-unit>
             <trans-unit id="dataflow.import.preview.impact" resname="dataflow.import.preview.impact">
                 <source>dataflow.import.preview.impact</source>
-                <target>%total% rows: %creations% to create, %updates% to update.</target>
+                <target>%total% row: %creations% to create, %updates% to update.|%total% rows: %creations% to create, %updates% to update.</target>
             </trans-unit>
             <trans-unit id="dataflow.import.preview.updates_warning" resname="dataflow.import.preview.updates_warning">
                 <source>dataflow.import.preview.updates_warning</source>
