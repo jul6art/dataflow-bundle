@@ -8,7 +8,7 @@
 {% extends layout %}
 
 {# The screen's title, then the layout's own — the application's name in admin-bundle's shell. #}
-{% block title %}{% set layout_title = parent()|trim %}{{ (prefix ~ '.result.title')|trans({}, domain) }}{{ layout_title is not empty ? ' · ' ~ layout_title : '' }}{% endblock %}
+{% block title %}{% set layout_title = parent()|trim %}{{ (prefix ~ '.result.title')|trans(title_parameters|default({}), domain) }}{{ layout_title is not empty ? ' · ' ~ layout_title : '' }}{% endblock %}
 
 {% block content %}
     <div class="max-w-3xl" data-dataflow-import="{{ import }}" data-dataflow-step="report">

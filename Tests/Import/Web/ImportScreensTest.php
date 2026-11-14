@@ -74,6 +74,8 @@ final class ImportScreensTest extends WebTestCase
         self::assertCount(1, $crawler->filter('input[type=file][name=file]'));
         self::assertCount(1, $crawler->filter('[data-dataflow-template]'));
         self::assertCount(1, $crawler->filter('input[name=_token]'));
+        self::assertSame('A CSV of fruits from Normandy', $crawler->filter('h1 + p')->text(), 'The object the import belongs to, named in its subtitle.');
+        self::assertSame('Dates as YYYY-MM-DD.', $crawler->filter('[data-dataflow-hint]')->text(), 'The import\'s own advice.');
     }
 
     public function testAnActorWithoutTheImportsRightIsRefusedOnEveryAction(): void
@@ -312,6 +314,7 @@ final class ImportScreensTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSame(['1. Import fruits', '2. Import vegetables'], $crawler->filter('[data-dataflow-imports] li')->each(static fn (Crawler $item): string => trim($item->text())));
         self::assertSame('/many/many_fruit', $crawler->filter('[data-dataflow-imports] a')->attr('href'));
+        self::assertCount(0, $crawler->filter('[data-dataflow-hint]'), 'No advice when the import gives none.');
 
         $this->upload('/many/many_veg', "name\ncarrot\n");
         self::assertResponseRedirects('/many/many_veg/mapping', 303);

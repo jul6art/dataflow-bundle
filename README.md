@@ -7,7 +7,7 @@ Tabular import, export and report engine for Symfony
 
 <p align="left">
     <a href="https://opensource.org/licenses/MIT" target="_blank"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License"></a>
-    <img src="https://img.shields.io/static/v1?label=stable&message=v1.16.2&color=0ea5e9" alt="Version">
+    <img src="https://img.shields.io/static/v1?label=stable&message=v1.16.3&color=0ea5e9" alt="Version">
 </p>
 
 Everything a management application needs to move tabular data across its own boundary: writing a
@@ -767,7 +767,9 @@ What the screens handle for you:
 - `ImportFailedException`: how far the file went, and whether what was written was rolled back.
 
 Every screen can be replaced per import (`templates()`), and receives `templateContext()`; the
-report also receives what `ImportResult::$variables` carries. The French of the screens' keys
+report also receives what `ImportResult::$variables` carries. A `title_parameters` entry of the
+context feeds the titles and subtitles (the index an import belongs to, named), and
+`<prefix>.new.hint`, when translated, adds the import's own advice under the upload (1.16.3). The French of the screens' keys
 (`dataflow.import.screen.*`, `.preview.*`, the new `.error.*`) is the consumer's, like the rest.
 
 ### Running an import off the request thread

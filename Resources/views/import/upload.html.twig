@@ -10,7 +10,7 @@
 {% extends layout %}
 
 {# The screen's title, then the layout's own — the application's name in admin-bundle's shell. #}
-{% block title %}{% set layout_title = parent()|trim %}{{ (prefix ~ '.new.title')|trans({}, domain) }}{{ layout_title is not empty ? ' · ' ~ layout_title : '' }}{% endblock %}
+{% block title %}{% set layout_title = parent()|trim %}{{ (prefix ~ '.new.title')|trans(title_parameters|default({}), domain) }}{{ layout_title is not empty ? ' · ' ~ layout_title : '' }}{% endblock %}
 
 {% block content %}
     <div class="max-w-2xl" data-dataflow-import="{{ import }}" data-dataflow-step="upload">
@@ -37,6 +37,11 @@
                             <input type="file" id="dataflow-import-file" name="file" accept=".csv,text/csv" class="hidden" required>
                         </label>
                         <p class="text-xs text-slate-500 mt-2">{{ 'dataflow.import.screen.hint'|trans({'%fields%': fields|join(', ')}, 'dataflow') }}</p>
+                        {# The import's own advice, when it gives one: the date formats, the values a column takes. #}
+                        {% set hint = prefix ~ '.new.hint' %}
+                        {% if hint|trans(title_parameters|default({}), domain) != hint %}
+                            <p class="text-xs text-slate-500 mt-1" data-dataflow-hint>{{ hint|trans(title_parameters|default({}), domain) }}</p>
+                        {% endif %}
                         {% if routes.template %}
                             <p class="text-xs mt-2">
                                 <a href="{{ path(routes.template, route_parameters) }}" class="text-accent-600 hover:underline" data-dataflow-template>

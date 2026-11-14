@@ -127,6 +127,12 @@ final class FruitImportDefinition extends AbstractImportDefinition
     }
 
     #[\Override]
+    public function templateContext(ImportContext $context): array
+    {
+        return 'fruit' === $this->key ? ['title_parameters' => ['%orchard%' => 'Normandy']] : [];
+    }
+
+    #[\Override]
     public function templates(): array
     {
         return $this->templates;
